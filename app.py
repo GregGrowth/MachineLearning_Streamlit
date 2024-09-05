@@ -101,6 +101,4 @@ elif type_ml == "NailsDetection":
     nail_page()
 else:
     st.write("Choisissez une option")
-
-
-# app.py, run with 'streamlit run app.py'
+    
