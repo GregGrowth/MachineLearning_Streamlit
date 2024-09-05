@@ -34,6 +34,8 @@ def classification_page():
     else:
         st.warning("Aucune colonne sélectionnée pour l'entraînement.")
 
+
+
     # Choix de l'utilisateur pour la taille du split
     test_size = st.sidebar.slider("Taille du jeu de test (%)", 10, 50, 20) / 100
     random_state = st.sidebar.number_input("Random State", value=42)
@@ -44,6 +46,8 @@ def classification_page():
     st.subheader("Taille des ensembles d'entraînement et de test")
     st.write(f"Taille de l'ensemble d'entraînement : {X_train.shape[0]}")
     st.write(f"Taille de l'ensemble de test : {X_test.shape[0]}")
+
+
 
     # Sélection du modèle par l'utilisateur
     model_choice = st.sidebar.selectbox("Choisissez un modèle",
