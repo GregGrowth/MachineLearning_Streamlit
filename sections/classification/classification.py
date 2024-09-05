@@ -9,7 +9,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 def classification_page():
-    st.header("Bienvenue dans le Playground de Classification")
+
+    st.header("Bienvenue")
+    st.caption("Bienvenue dans le Playground de classification")
 
     # Charger le fichier vin.csv
     @st.cache_data
