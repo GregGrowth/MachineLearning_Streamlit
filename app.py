@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+import io
 from sections.classification.classification import classification_page
 from sections.nailsdetection.nails import nail_page
 from sections.regression.regression import regression_page
@@ -10,86 +12,93 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-type_data = st.sidebar.radio(
+st.markdown("# Projet Machine Learning 🎈")
+st.sidebar.markdown("# Main page 🎈")
+
+st.sidebar.markdown("# Source de données 🎈")
+
+df = pd.DataFrame()
+
+# Options pour choisir la base de données
+source_data = st.sidebar.radio(
+    "Choisissez votre source de données",
+    ["vin.csv", "diabete.csv", "upload file (*.csv)"]
+)
+
+if source_data == "vin.csv":
+    df = pd.read_csv("./data/vin.csv", index_col=0)  # read a CSV file inside the 'data" folder next to 'app.py'
+elif source_data == "diabete.csv":
+    df = pd.read_csv("./data/diabete.csv", index_col=0)  # read a CSV file inside the 'data" folder next to 'app.py'
+elif source_data == "upload file (*.csv)":
+    # Importation du fichier CSV
+    st.sidebar.header("Importez vos données")
+
+    # Option pour modifier le séparateur et le décimal du fichier CSV
+    separateur = st.sidebar.text_input("Quel est le séparateur du fichier CSV ?", ",")
+    decimal = st.sidebar.text_input("Quel est le décimal du fichier CSV ?", ".")
+
+    # Télechargement du fichier CSV
+    uploaded_file = st.sidebar.file_uploader("Téléchargez votre fichier CSV", type=["csv"])
+
+    # Lire le fichier CSV
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file, sep=separateur, decimal=decimal)
+
+else:
+    st.write("Choisissez votre source de données")
+
+# Afficher un aperçu des données
+st.subheader("Aperçu des données version originale")
+st.write(df.head(5))
+st.markdown("Votre base de données est de taille ...")
+st.markdown("On a détecter :")
+
+
+#########################################
+# Étape 2 : Proposer des options de nettoyage
+st.sidebar.markdown("# Nettoyage des données")
+
+st.sidebar.markdown("## Typologie des données")
+if st.sidebar.checkbox("Consulter la typologie des données"):
+    st.subheader("Aperçu des informations sur la base de données")
+    buffer = io.StringIO()
+    df.info(buf=buffer)
+    s = buffer.getvalue()
+    st.text(s)
+
+st.sidebar.markdown("## Imputation des données manquantes")
+# Option pour supprimer les valeurs manquantes
+if st.sidebar.checkbox("Supprimer les lignes avec des valeurs manquantes"):
+    data = df.dropna()
+    st.write("Données après suppression des valeurs manquantes :")
+    st.write(data.head())
+
+st.sidebar.markdown("## Supression des données")
+# Option pour supprimer une colonne
+columns = df.columns.tolist()
+column_to_drop = st.sidebar.multiselect("Sélectionnez les colonnes à supprimer", columns)
+if len(column_to_drop) > 0:
+    data = df.drop(columns=column_to_drop)
+    st.write(f"Données après suppression des colonnes {column_to_drop}:")
+    st.write(df.head())
+
+st.sidebar.markdown("## Encodage des variables catégorielles")
+
+st.sidebar.write("Les données sont maintenant prêtes à être utilisées pour l'étape de classification.")
+
+
+st.sidebar.markdown("# Playground 🎈")
+type_ml = st.sidebar.radio(
     "Choisissez votre type de playground",
     ["Regression", "Classification", "NailsDetection"]
 )
 
-if type_data == "Regression":
+if type_ml == "Regression":
     regression_page()
-elif type_data == "Classification":
+elif type_ml == "Classification":
     classification_page()
-elif type_data == "NailsDetection":
+elif type_ml == "NailsDetection":
     nail_page()
 else:
     st.write("Choisissez une option")
-
-import streamlit as st
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, classification_report
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-def classification_page():
-    st.header("Bienvenue dans le Playground de Classification")
-
-    # Charger le fichier vin.csv
-    @st.cache
-    def load_data():
-        return pd.read_csv("vin.csv")
-
-    data = load_data()
-
-    st.subheader("Aperçu du jeu de données")
-    st.write(data.head())
-
-    # Séparer les variables explicatives (X) et la variable cible (y)
-    X = data.drop(columns=['target', 'Unnamed: 0'])
-    y = data['target']
-
-    # Choix de l'utilisateur pour la taille du split
-    test_size = st.sidebar.slider("Taille du jeu de test (%)", 10, 50, 20) / 100
-    random_state = st.sidebar.number_input("Random State", value=42)
-
-    # Split du jeu de données en train et test
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-
-    st.subheader("Taille des ensembles d'entraînement et de test")
-    st.write(f"Taille de l'ensemble d'entraînement : {X_train.shape[0]}")
-    st.write(f"Taille de l'ensemble de test : {X_test.shape[0]}")
-
-    # Instanciation du modèle et entraînement
-    st.subheader("Entraînement du modèle")
-    clf = LogisticRegression(max_iter=200)
-    clf.fit(X_train, y_train)
-
-    st.write("Modèle entraîné avec succès.")
-
-    # Prédiction
-    st.subheader("Prédiction")
-    y_pred = clf.predict(X_test)
-    y_prob = clf.predict_proba(X_test)
-
-    st.write("Prédictions sur l'ensemble de test :")
-    st.write(y_pred)
-
-    st.write("Probabilités de prédiction :")
-    st.write(y_prob)
-
-    # Évaluation
-    st.subheader("Évaluation du modèle")
-
-    # Matrice de confusion
-    cm = confusion_matrix(y_test, y_pred)
-
-    st.write("Matrice de confusion :")
-    fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
-    st.pyplot(fig)
-
-    # Rapport de classification
-    cr = classification_report(y_test, y_pred, output_dict=True)
-    st.write("Rapport de classification :")
-    st.json(cr)
+    
