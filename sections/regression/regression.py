@@ -1,4 +1,5 @@
 import streamlit as st
+
 from sections.regression.apercu import show_apercu
 from sections.regression.modeles import show_modeles
 from sections.regression.visuels import show_visuels
@@ -6,6 +7,7 @@ from sections.regression.comparaison import show_comparaison
 
 # Fonction principale pour le Playground de Régression
 def regression_page():
+
     st.caption("Bienvenue dans le Playground de Régression")
 
     # Sidebar pour les paramètres de base
@@ -27,3 +29,5 @@ def regression_page():
 
     with comparaison_tab:
         show_comparaison(X_train, X_test, y_train, y_test)
+
+  
