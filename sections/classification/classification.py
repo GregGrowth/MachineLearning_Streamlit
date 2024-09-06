@@ -9,21 +9,20 @@ from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Vérifier si df est déjà chargé dans st.session_state
-if 'df' not in st.session_state:
-    # Charger le fichier CSV dans df
-    st.session_state['df'] = pd.read_csv("./data/vin.csv")
-df = st.session_state['df']  # Récupérer les données depuis st.session_stat
-
-# Initialiser les clés X et y dans st.session_state si elles ne sont pas encore définies
-if 'X' not in st.session_state:
-    st.session_state['X'] = None
-if 'y' not in st.session_state:
-    st.session_state['y'] = None
-
-
 # Fonction principale pour la classification
 def classification_page():
+    # Vérifier si df est déjà chargé dans st.session_state
+    if 'df' not in st.session_state:
+        # Charger le fichier CSV dans df
+        st.session_state['df'] = pd.read_csv("./data/vin.csv")
+    df = st.session_state['df']  # Récupérer les données depuis st.session_state
+
+    # Initialiser les clés X et y dans st.session_state si elles ne sont pas encore définies
+    if 'X' not in st.session_state:
+        st.session_state['X'] = None
+    if 'y' not in st.session_state:
+        st.session_state['y'] = None
+
     st.caption("Playground ML - Classification")
 
     # Jauge de test_size dans la barre latérale
