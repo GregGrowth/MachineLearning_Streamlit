@@ -34,7 +34,8 @@ elif page == "Playground":
 
     type_ml = st.sidebar.radio(
         "Choisissez votre type de playground",
-        ["Regression", "Classification", "NailsDetection"]
+        ["Regression", "Classification", "NailsDetection"],
+        index=None
     )
 
     if type_ml == "Regression":
@@ -45,6 +46,5 @@ elif page == "Playground":
         nail_page()
     else:
         st.write("Choisissez une option")
-    st.write("À venir : Options de régression, classification, etc.")
 
 # app.py, run with 'streamlit run app.py'
