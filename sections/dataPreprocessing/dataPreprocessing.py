@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
 
 
 def nettoyageData_page():
@@ -99,7 +100,7 @@ def nettoyageData_page():
                 st.session_state['df'] = df
                 st.success("Données enregistrées avec succès!")
 
-        # Etudes de la typologie des données
+        # Etudes de la typologie des données ##########################################################################
         st.subheader("Typologie des données")
         st.write("Vérifiez que toutes vos données sont de type numérique pour éviter la non-compatibilité avec certains modèles de machine learning.")
 
@@ -150,24 +151,8 @@ def nettoyageData_page():
                 hide_index=True,
             )
 
-        #############################################################
-
-        # Détection des données manquantes
-        st.subheader("Données manquantes")
-        missing_data = df.isnull().sum()
-        st.write(f"La base de données est composée de {missing_data.values.sum()} données manquantes")
-        missing_data = missing_data[missing_data > 0]
-        if not missing_data.empty:
-            missing_data_df = pd.DataFrame({
-                "Nom de la variable": missing_data.index,
-                "Nombre de données manquantes": missing_data.values
-            })
-            st.write(missing_data_df)
-        else:
-            st.write("Aucune donnée manquante détectée.")
-
-        # Détection des données non numériques
-        st.subheader("Données non numériques")
+        # Détection des données non numériques #########################################################################
+        st.subheader("Détection des données non numériques")
         categorical_columns = df.select_dtypes(exclude=['number']).columns
         if not categorical_columns.empty:
             categorical_data_df = pd.DataFrame({
@@ -178,21 +163,161 @@ def nettoyageData_page():
         else:
             st.write("Aucune donnée non numérique détectée.")
 
-        # Suppression des données
+
+        # Encodage des variables catégorielles #########################################################################
+        st.subheader("Encodage des variables catégorielles")
+
+        if not categorical_columns.empty:
+            # Sélectionner une variable catégorielle
+            selected_var = st.selectbox("Choisissez une variable à encoder :", categorical_columns, index=None)
+
+            if selected_var:
+                # Afficher la distribution des valeurs
+                st.write(f"**Value Counts pour {selected_var} :**")
+                st.write(df[selected_var].value_counts())
+
+                # Choisir une méthode d'encodage
+                encoding_method = st.radio(
+                    "Choisissez une méthode d'encodage :",
+                    ("get_dummies", "OneHotEncoder", "OrdinalEncoder", "LabelEncoder")
+                )
+
+                # Encodage en fonction de la méthode choisie
+                df_encoded = df.copy()
+                var_encoded = []
+
+                if encoding_method == "get_dummies":
+                    st.write("Utilisation de `pd.get_dummies()`")
+                    st.write(df_encoded.head())
+                    # Créer un DataFrame dummies pour la colonne sélectionnée
+                    var_encoded = pd.get_dummies(df_encoded[selected_var], prefix=selected_var)
+
+                    st.write(pd.concat([df_encoded.drop(columns=[selected_var]), var_encoded], axis=1).head())
+
+                if encoding_method == "OneHotEncoder":
+                    st.write("Utilisation de `OneHotEncoder` de Scikit-learn")
+                    st.write(df_encoded.head())
+                    ohe = OneHotEncoder()
+                    var_encoded = ohe.fit_transform(df_encoded[[selected_var]]).toarray()
+
+                    # Créer un DataFrame pour l'encodage avec des noms de colonnes
+                    ohe_columns = [f"{selected_var}_{cat}" for cat in ohe.categories_[0]]
+                    var_encoded = pd.DataFrame(var_encoded, columns=ohe_columns)
+
+                    st.write(pd.concat([df_encoded.drop(columns=[selected_var]), var_encoded], axis=1))
+
+                if encoding_method == "OrdinalEncoder":
+                    st.write("Utilisation de `OrdinalEncoder` de Scikit-learn")
+                    st.write(df_encoded.head())
+                    oe = OrdinalEncoder()
+                    var_encoded = oe.fit_transform(df_encoded[[selected_var]])
+
+                    # Créer un DataFrame pour l'encodage avec des noms de colonnes
+                    var_encoded = pd.DataFrame(var_encoded, columns=[selected_var])
+
+                    st.write(pd.concat([df_encoded.drop(columns=[selected_var]), var_encoded], axis=1))
+
+                if encoding_method == "LabelEncoder":
+                    st.write("Utilisation de `LabelEncoder` de Scikit-learn")
+                    st.write(df_encoded.head())
+                    le = LabelEncoder()
+                    var_encoded = le.fit_transform(df_encoded[[selected_var]])
+
+                    # Créer un DataFrame pour l'encodage avec des noms de colonnes
+                    var_encoded = pd.DataFrame(var_encoded, columns=[selected_var])
+
+                    st.write(pd.concat([df_encoded.drop(columns=[selected_var]), var_encoded], axis=1))
+
+                if st.button("Appliquer l'encodage"):
+                    # Enregistrer les données encodées dans la session
+                    # Supprimer la colonne d'origine et concaténer la variable encodée
+                    df = pd.concat([df_encoded.drop(columns=[selected_var]), var_encoded], axis=1)
+                    st.session_state['df'] = df
+                    st.success(f"Encodage de {selected_var} appliqué avec succès!")
+        else:
+            st.write("Aucune donnée non numérique à encodée.")
+
+        # Suppression des données ######################################################################################
         st.subheader("Suppression des colonnes")
         columns = df.columns.tolist()
         column_to_drop = st.multiselect("Sélectionnez les colonnes à supprimer", columns)
+        df_supp = df.copy()
         if len(column_to_drop) > 0:
-            data = df.drop(columns=column_to_drop)
+            df_supp = df_supp.drop(columns=column_to_drop)
             st.write(f"Données après suppression des colonnes {column_to_drop}:")
-            st.write(data.head())
+            st.write(df_supp.head())
 
-        # Options de nettoyage
-        st.subheader("Imputation des données manquantes")
-        if st.checkbox("Supprimer les lignes avec des valeurs manquantes"):
-            data = df.dropna()
-            st.write("Données après suppression des valeurs manquantes :")
-            st.write(data.head())
+            if st.button("Appliquer la suppression"):
+                # Enregistrer les données encodées dans la session
+                # Supprimer la colonne d'origine et concaténer la variable encodée
+                df = df_supp
+                st.session_state['df'] = df
+                st.success(f"La variable '{column_to_drop}' a été supprimé avec succès!")
+
+        # Modification des données #####################################################################################
+        st.subheader("Modification des données")
+
+        # Sélectionner la variable à modifier
+        selected_var = st.selectbox("Choisissez une variable à modifier :", df.columns, index=None)
+
+        df_modif = df.copy()
+        if selected_var:
+            # Afficher la distribution des valeurs
+            st.write(f"**Value Counts pour {selected_var} :**")
+            st.write(df_modif[selected_var].value_counts())
+
+            # Input pour les anciennes et nouvelles valeurs
+            st.write(f"Modification manuelle de la variable {selected_var} avec `replace()`")
+            oldValue = st.text_input(f"Quel est le mot à remplacer dans la colonne {selected_var} ?",
+                                     placeholder="Ancienne valeur")
+
+            newValue = st.text_input(
+                f"Quel est le champ que vous souhaitez mettre à la place de {oldValue} dans la colonne {selected_var} ?",
+                placeholder="Nouvelle valeur")
+
+            # Ajouter une case à cocher pour confirmer
+            confirm_change = st.checkbox("Je confirme la modification", key="confirm_change")
+            if confirm_change:
+                if oldValue and newValue:
+
+                    # Effectuer le remplacement manuel dans les autres cas
+                    df_modif[selected_var].replace(oldValue, newValue, inplace=True)
+                    st.write(
+                        f"Remplacement de `{oldValue}` par `{newValue}` effectué dans la colonne {selected_var}.")
+
+                    # Aperçu des modifications
+                    st.write("Aperçu des modifications :")
+                    st.write(df_modif[selected_var])
+
+                else:
+                    st.warning("Veuillez remplir à la fois l'ancienne et la nouvelle valeur.")
+
+            if st.button("Appliquer la modification"):
+                # Enregistrer les données encodées dans la session
+                df = df_modif
+                st.session_state['df'] = df
+                st.success(f"Modification appliquée avec succès pour {selected_var} !")
+
+        # # Détection des données manquantes ###########################################################################
+        # st.subheader("Détection des données manquantes")
+        # missing_data = df.isnull().sum()
+        # st.write(f"La base de données est composée de {missing_data.values.sum()} données manquantes")
+        # missing_data = missing_data[missing_data > 0]
+        # if not missing_data.empty:
+        #     missing_data_df = pd.DataFrame({
+        #         "Nom de la variable": missing_data.index,
+        #         "Nombre de données manquantes": missing_data.values
+        #     })
+        #     st.write(missing_data_df)
+        # else:
+        #     st.write("Aucune donnée manquante détectée.")
+        #
+        # # Options de nettoyage #######################################################################################
+        # st.subheader("Imputation des données manquantes")
+        # if st.checkbox("Supprimer les lignes avec des valeurs manquantes"):
+        #     data = df.dropna()
+        #     st.write("Données après suppression des valeurs manquantes :")
+        #     st.write(data.head())
 
     else:
         st.write("Aucune donnée n'a été chargée. Veuillez charger les données via la page Source de données.")
