@@ -19,6 +19,7 @@ def classification_page():
         return pd.read_csv("data/vin.csv")
 
     data = load_data()
+    # data = st.session_state['df']
 
     st.subheader("Aperçu du jeu de données")
     st.write(data.head())
