@@ -13,7 +13,7 @@ import seaborn as sns
 if 'df' not in st.session_state:
     # Charger le fichier CSV dans df
     st.session_state['df'] = pd.read_csv("./data/vin.csv")
-df = st.session_state['df']  # Récupérer les données depuis st.session_state
+df = st.session_state['df']  # Récupérer les données depuis st.session_stat
 
 # Initialiser les clés X et y dans st.session_state si elles ne sont pas encore définies
 if 'X' not in st.session_state:
