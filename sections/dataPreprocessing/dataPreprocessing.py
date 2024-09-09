@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import io
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder, StandardScaler, MinMaxScaler, RobustScaler
+from imblearn.over_sampling import SMOTE, RandomOverSampler
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -102,6 +103,7 @@ def nettoyageData_page():
                 st.session_state['df'] = df
                 st.success("Données enregistrées avec succès!")
 
+        st.markdown("---")
         # Etudes de la typologie des données ##########################################################################
         st.subheader("Typologie des données")
         st.write("Vérifiez que toutes vos données sont de type numérique pour éviter la non-compatibilité avec certains modèles de machine learning.")
@@ -153,6 +155,7 @@ def nettoyageData_page():
                 hide_index=True,
             )
 
+        st.markdown("---")
         # Suppression des données ######################################################################################
         st.subheader("Suppression des colonnes")
         columns = df.columns.tolist()
@@ -170,6 +173,7 @@ def nettoyageData_page():
                 st.session_state['df'] = df
                 st.success(f"La variable '{column_to_drop}' a été supprimé avec succès!")
 
+        st.markdown("---")
         # Détection des données non numériques #########################################################################
         st.subheader("Détection des données non numériques")
         categorical_columns = df.select_dtypes(exclude=['number']).columns
@@ -182,6 +186,7 @@ def nettoyageData_page():
         else:
             st.write("Aucune donnée non numérique détectée.")
 
+        st.markdown("---")
         # Modification des données #####################################################################################
         st.subheader("Modification des données")
 
@@ -226,6 +231,7 @@ def nettoyageData_page():
                 st.session_state['df'] = df
                 st.success(f"Modification appliquée avec succès pour {selected_var} !")
 
+        st.markdown("---")
         # Encodage des variables catégorielles #########################################################################
         st.subheader("Encodage des variables catégorielles")
 
@@ -300,6 +306,7 @@ def nettoyageData_page():
         else:
             st.write("Aucune donnée non numérique à encodée.")
 
+        st.markdown("---")
         # Détection des données manquantes #############################################################################
         st.subheader("Détection des données manquantes")
 
@@ -320,6 +327,7 @@ def nettoyageData_page():
         else:
             st.write("Aucune donnée manquante détectée.")
 
+        st.markdown("---")
         # Imputation des données manquantes ###########################################################################
         st.subheader("Imputation des données manquantes")
 
@@ -513,7 +521,265 @@ def nettoyageData_page():
                     st.success(
                         f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la valeur '{fill_value}' avec succès!")
 
+        st.markdown("---")
         # Normalisation des données #########################################################################
         st.subheader("Normalisation des données")
+
+        st.caption(
+            "La normalisation des données est une étape cruciale dans le prétraitement des données. Elle est souvent utilisée pour rendre les données comparables sur une échelle commune, ce qui peut améliorer la performance de certains algorithmes de machine learning.")
+
+        st.warning("La normalisation des données ne s'applique que pour les colonnes de type numérique")
+
+        if st.checkbox("Normaliser les données"):
+            df_normalized = df.copy()
+
+            expander = st.expander("Voir les explications des différentes méthodes")
+            expander.markdown("""
+                ### Conseils :
+    
+                **Min-Max Scaling :**
+    
+                - **Principe** : Le Min-Max Scaling (ou mise à l'échelle min-max) transforme les données de sorte que les valeurs soient compressées dans une échelle définie, généralement [0, 1].
+                - **Formule** : $$ x' = \\frac{x - \\text{min}(x)}{\\text{max}(x) - \\text{min}(x)}  $$
+                    où x est la valeur originale, min(x) est la valeur minimale de la colonne, et max(x) est la valeur maximale de la colonne.
+                - **Effet** : Cette méthode est sensible aux valeurs extrêmes (outliers). Une valeur très élevée ou très basse peut étirer l'échelle et affecter la normalisation des autres valeurs.
+    
+                    **💡Quand l'utiliser :**
+                    - Lorsque les données ont une distribution uniforme et que vous souhaitez les ramener dans une plage fixe, par exemple [0, 1].
+                    - Idéal pour les algorithmes sensibles à l'échelle des données, comme les réseaux de neurones.
+    
+                **Standardisation (Z-score Normalization) :**
+    
+                - **Principe** : La standardisation transforme les données pour qu'elles aient une moyenne de 0 et un écart-type de 1.
+                - **Formule** : $$ x' = \\frac{(x−μ)}{σ}  $$
+                    où μ est la moyenne de la colonne et σ est l'écart-type de la colonne.
+                - **Effet** : Cette méthode n'est pas influencée par les valeurs extrêmes, mais les valeurs normalisées peuvent être négatives si elles sont en dessous de la moyenne.
+    
+                    **💡Quand l'utiliser :**
+                    - Lorsque les données ont une distribution approximativement normale ou que vous souhaitez rendre les données comparables en termes d'écart-type.
+                    - Idéal pour les algorithmes qui supposent des données normalement distribuées, comme la régression linéaire ou les modèles de classification basés sur des distances.
+    
+                **Robust Scaling :**
+    
+                - **Principe** : Le Robust Scaling utilise la médiane et l'intervalle interquartile (IQR) pour normaliser les données, ce qui le rend moins sensible aux valeurs extrêmes.
+                - **Formule** : $$ x' = \\frac{x - \\text{mediane}(x)}{\\text{IQR}(x)}  $$
+                    où mediane(x) est la médiane des valeurs et IQR(x) est l'intervalle interquartile (la différence entre le 75ème et le 25ème percentile).
+                - **Effet** : Les valeurs extrêmes ont moins d'impact sur la normalisation, ce qui est utile lorsque les données contiennent des outliers.
+    
+                    **💡Quand l'utiliser :**
+                    - Lorsque les données contiennent des valeurs extrêmes (outliers) ou lorsque la distribution est fortement asymétrique.
+                    - Idéal pour les algorithmes robustes aux outliers, comme les arbres de décision.
+                """)
+
+            # Sélectionner les colonnes numériques pour la normalisation
+            numeric_columns = df.select_dtypes(include=['float64', 'int64']).columns
+
+            if len(numeric_columns) > 0:
+                st.write("Sélectionnez les colonnes à normaliser :")
+                columns_to_normalize = st.multiselect("Colonnes à normaliser", options=numeric_columns,
+                                                      default=numeric_columns)
+
+                # Normalisation avec différentes techniques
+                st.write("Choisissez une méthode de normalisation :")
+                normalization_method = st.radio(
+                    "Méthode de normalisation :",
+                    ("Min-Max Scaling", "Standardisation", "Robust Scaling"),
+                    index = None
+                )
+
+                if normalization_method == "Min-Max Scaling":
+                    st.write("Utilisation de `MinMaxScaler` de Scikit-learn")
+                    scaler = MinMaxScaler()
+                    df_normalized[columns_to_normalize] = scaler.fit_transform(df_normalized[columns_to_normalize])
+                    st.write("Données normalisées avec `MinMaxScaler`.")
+
+                    # Afficher les données normalisées
+                    st.write("Aperçu des données normalisées :")
+                    st.write(df_normalized.head())
+
+                    if st.checkbox("Visualiser des données"):
+                        # Créer deux colonnes pour afficher les distributions avant et après normalisation
+                        col1, col2 = st.columns(2)
+
+                        # Visualiser les distributions avant la normalisation
+                        with col1:
+                            st.write("### Avant la normalisation")
+                            for column in columns_to_normalize:
+                                fig, ax = plt.subplots()
+                                sns.histplot(df[column], kde=True, ax=ax)
+                                ax.set_title(f'Distribution de {column} (avant normalisation)')
+                                st.pyplot(fig)
+
+                        # Visualiser les distributions après la normalisation
+                        with col2:
+                            st.write("### Après la normalisation")
+                            for column in columns_to_normalize:
+                                fig, ax = plt.subplots()
+                                sns.histplot(df_normalized[column], kde=True, ax=ax)
+                                ax.set_title(f'Distribution de {column} (après normalisation)')
+                                st.pyplot(fig)
+
+                    # Enregistrer les données normalisées dans la session
+                    if st.button("Appliquer la normalisation des données"):
+                        df = df_normalized
+                        st.session_state['df'] = df
+                        st.success("Données normalisées avec succès!")
+
+                elif normalization_method == "Standardisation":
+                    st.write("Utilisation de `StandardScaler` de Scikit-learn")
+                    scaler = StandardScaler()
+                    df_normalized[columns_to_normalize] = scaler.fit_transform(df_normalized[columns_to_normalize])
+                    st.write("Données standardisées avec `StandardScaler`.")
+
+                    # Afficher les données normalisées
+                    st.write("Aperçu des données normalisées :")
+                    st.write(df_normalized.head())
+
+                    if st.checkbox("Visualiser des données"):
+                        # Créer deux colonnes pour afficher les distributions avant et après normalisation
+                        col1, col2 = st.columns(2)
+
+                        # Visualiser les distributions avant la normalisation
+                        with col1:
+                            st.write("### Avant la normalisation")
+                            for column in columns_to_normalize:
+                                fig, ax = plt.subplots()
+                                sns.histplot(df[column], kde=True, ax=ax)
+                                ax.set_title(f'Distribution de {column} (avant normalisation)')
+                                st.pyplot(fig)
+
+                        # Visualiser les distributions après la normalisation
+                        with col2:
+                            st.write("### Après la normalisation")
+                            for column in columns_to_normalize:
+                                fig, ax = plt.subplots()
+                                sns.histplot(df_normalized[column], kde=True, ax=ax)
+                                ax.set_title(f'Distribution de {column} (après normalisation)')
+                                st.pyplot(fig)
+
+                    # Enregistrer les données normalisées dans la session
+                    if st.button("Appliquer la normalisation des données"):
+                        df = df_normalized
+                        st.session_state['df'] = df
+                        st.success("Données normalisées avec succès!")
+
+                elif normalization_method == "Robust Scaling":
+                    st.write("Utilisation de `RobustScaler` de Scikit-learn")
+                    scaler = RobustScaler()
+                    df_normalized[columns_to_normalize] = scaler.fit_transform(df_normalized[columns_to_normalize])
+                    st.write("Données normalisées avec `RobustScaler`.")
+
+                    # Afficher les données normalisées
+                    st.write("Aperçu des données normalisées :")
+                    st.write(df_normalized.head())
+
+                    if st.checkbox("Visualiser des données"):
+                        # Créer deux colonnes pour afficher les distributions avant et après normalisation
+                        col1, col2 = st.columns(2)
+
+                        # Visualiser les distributions avant la normalisation
+                        with col1:
+                            st.write("### Avant la normalisation")
+                            for column in columns_to_normalize:
+                                fig, ax = plt.subplots()
+                                sns.histplot(df[column], kde=True, ax=ax)
+                                ax.set_title(f'Distribution de {column} (avant normalisation)')
+                                st.pyplot(fig)
+
+                        # Visualiser les distributions après la normalisation
+                        with col2:
+                            st.write("### Après la normalisation")
+                            for column in columns_to_normalize:
+                                fig, ax = plt.subplots()
+                                sns.histplot(df_normalized[column], kde=True, ax=ax)
+                                ax.set_title(f'Distribution de {column} (après normalisation)')
+                                st.pyplot(fig)
+
+                    # Enregistrer les données normalisées dans la session
+                    if st.button("Appliquer la normalisation des données"):
+                        df = df_normalized
+                        st.session_state['df'] = df
+                        st.success("Données normalisées avec succès!")
+            else:
+                st.write("Aucune colonne numérique trouvée pour la normalisation.")
+
+        st.markdown("---")
+        # Section Équilibrage de la variable ciblée
+        st.subheader("Équilibrage de la variable ciblée")
+
+        # Sélection de la variable cible
+        target_column = st.selectbox("Sélectionnez la variable cible :", options=df.columns)
+
+        if target_column:
+            # Vérification que la variable est catégorielle ou binaire
+            if df[target_column].dtype == 'object' or df[target_column].nunique() <= 20:  # Limiter aux variables catégorielles ou binaires
+                # Affichage de la distribution sous forme de diagramme circulaire
+                st.write(f"**Distribution de la variable cible '{target_column}' :**")
+                class_distribution = df[target_column].value_counts()
+                fig, ax = plt.subplots()
+                ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=90)
+                ax.axis('equal')  # Assurer un graphique circulaire
+                st.pyplot(fig)
+
+                # Vérification de l'équilibrage (Exemple : critère de 20% d'écart entre les classes)
+                imbalance_threshold = 0.2  # 20% d'écart max entre les classes pour considérer comme équilibré
+                ratio = class_distribution.max() / class_distribution.min()
+
+                if ratio <= (1 + imbalance_threshold):
+                    st.success("OK - La variable est équilibrée.")
+                else:
+                    st.warning("La variable est déséquilibrée. Choisissez une méthode de rééchantillonnage.")
+
+                    # Proposer une méthode de rééchantillonnage
+                    resampling_method = st.radio("Méthode de rééchantillonnage :",
+                                                 ("Sur-échantillonnage", "Sous-échantillonnage"))
+                    df_resampled = []
+                    if resampling_method == "Sur-échantillonnage":
+                        sm = SMOTE(random_state=0)
+                        X_res, y_res = sm.fit_resample(df.drop(target_column, axis=1), df[target_column])
+                        df_resampled = pd.concat([X_res, y_res], axis = 1)
+
+                        st.write(f"Nombre de lignes : {df_resampled.shape[0]}")
+                        st.write(df_resampled.head())
+
+                        # Affichage de la distribution sous forme de diagramme circulaire
+                        st.write(f"**Distribution de la variable cible '{target_column}' :**")
+                        class_distribution = df_resampled[target_column].value_counts()
+                        fig, ax = plt.subplots()
+                        ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=90)
+                        ax.axis('equal')  # Assurer un graphique circulaire
+                        st.pyplot(fig)
+
+                        # Enregistrer le rééchantillonnage des données dans la session
+                        if st.button("Appliquer le rééchantionnage des données"):
+                            df = df_resampled
+                            st.session_state['df'] = df
+                            st.success("Données rééchantillonnées avec succès!")
+
+                    elif resampling_method == "Sous-échantillonnage":
+                        ros = RandomOverSampler(random_state=0)
+                        X_res, y_res = ros.fit_resample(df.drop(target_column, axis=1), df[target_column])
+                        df_resampled = pd.concat([X_res, y_res], axis = 1)
+
+                        st.write(f"Nombre de lignes : {df_resampled.shape[0]}")
+                        st.write(df_resampled.head())
+
+                        # Affichage de la distribution sous forme de diagramme circulaire
+                        st.write(f"**Distribution de la variable cible '{target_column}' :**")
+                        class_distribution = df_resampled[target_column].value_counts()
+                        fig, ax = plt.subplots()
+                        ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=90)
+                        ax.axis('equal')  # Assurer un graphique circulaire
+                        st.pyplot(fig)
+
+                        # Enregistrer le rééchantillonnage des données dans la session
+                        if st.button("Appliquer le rééchantionnage des données"):
+                            df = df_resampled
+                            st.session_state['df'] = df
+                            st.success("Données rééchantillonnées avec succès!")
+
+            else:
+                st.warning("La variable sélectionnée n'est pas catégorielle ou contient trop de classes.")
+
     else:
-            st.write("Aucune donnée n'a été chargée. Veuillez charger les données via la page Source de données.")
+        st.write("Aucune donnée n'a été chargée. Veuillez charger les données via la page Source de données.")
