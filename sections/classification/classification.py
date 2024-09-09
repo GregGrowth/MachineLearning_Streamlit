@@ -12,9 +12,13 @@ from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
+# from sklearn.model_selection import cross_val_score
 
+# # Fonction pour calculer la validation croisée
+# def cross_validation_scores(model, X, y, cv=5):
+#     scores = cross_val_score(model, X, y, cv=cv, scoring='accuracy')
+#     return scores.mean(), scores.std()
 
-# TEST PUSH 2
 
 # Fonction principale pour la classification
 def classification_page():
@@ -78,8 +82,8 @@ def classification_page():
             st.sidebar.write(f"Random State sélectionné : {random_state}")
 
     # Création des onglets principaux
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["Sélection des variables", "Aperçu du dataset", "Modélisation", "Évaluation", "Comparaison"]
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["Sélection des variables", "Aperçu du dataset", "Modélisation", "Rapport final"]
     )
 
     # Onglet 1 : Sélection des variables
@@ -91,24 +95,24 @@ def classification_page():
         data_description_vin = {
             "Nom de la variable": [
                 "alcohol", "malic_acid", "ash", "alcalinity_of_ash", "magnesium", "total_phenols",
-                "flavanoids", "nonflavanoid_phenols", "proanthocyanins", "color_intensity",
+                "flavanoids", "nonflavanoid_phenols", "proanthocyanidins", "color_intensity",
                 "hue", "od280/od315_of_diluted_wines", "proline", "target"
             ],
             "Description": [
                 "Taux d'alcool dans le vin (en pourcentage).",
                 "Quantité d'acide malique présente dans le vin, un acide organique contribuant à l'acidité du vin. Valeur continue.",
-                "Quantité de cendres présentes après la combustion du vin. C'est une caractéristique chimique du vin utilisée pour évaluer sa composition minérale. Valeur continue.",
-                "Alcalinité des cendres, une mesure du degré de neutralisation de l'acide dans le vin. Valeur continue.",
-                "Quantité de magnésium présente dans le vin. Valeur continue en milligrammes.",
-                "Mesure de la concentration totale de phénols dans le vin. Les phénols jouent un rôle dans la couleur, l'astringence, et la stabilité du vin. Valeur continue.",
-                "Quantité de flavonoïdes, un type spécifique de phénols. Les flavonoïdes contribuent à la couleur et au goût du vin. Valeur continue.",
-                "Quantité de phénols non flavonoïdes. Valeur continue. Ces composés sont généralement présents en plus petites quantités.",
-                "Mesure des proanthocyanidines, des polyphénols qui influencent la couleur et le goût du vin. Valeur continue.",
+                "Quantité de cendres présentes après la combustion du vin. Valeur continue.",
+                "Alcalinité des cendres. Valeur continue.",
+                "Quantité de magnésium présente dans le vin. Valeur continue.",
+                "Mesure de la concentration totale de phénols dans le vin. Valeur continue.",
+                "Quantité de flavonoïdes, un type spécifique de phénols. Valeur continue.",
+                "Quantité de phénols non flavonoïdes. Valeur continue.",
+                "Mesure des proanthocyanidines, des polyphénols influençant la couleur et le goût. Valeur continue.",
                 "Intensité de la couleur du vin. Valeur continue.",
-                "Teinte du vin, qui est une mesure subjective de la couleur. Valeur continue.",
-                "Rapport des intensités de lumière absorbée à 280 nm et 315 nm. C'est une mesure de la qualité des protéines dans le vin. Valeur continue.",
-                "Quantité de proline, un acide aminé présent dans le vin, qui joue un rôle dans le goût et la structure du vin. Valeur continue.",
-                "Classe cible du vin, ici 'Vin amer'. C'est la variable que nous cherchons à prédire dans notre modèle de classification."
+                "Teinte du vin, mesure subjective de la couleur. Valeur continue.",
+                "Rapport des intensités de lumière absorbée à 280 nm et 315 nm. Valeur continue.",
+                "Quantité de proline, un acide aminé présent dans le vin. Valeur continue.",
+                "Classe cible du vin, ici 'Vin amer'."
             ]
         }
 
@@ -121,60 +125,62 @@ def classification_page():
 
         st.markdown("---")
 
-        st.markdown("<h6>➀ Vous pouvez sélectionner vos variables explicatives (X). Pour information, votre variable 'target' est déjà définie !</h6>", unsafe_allow_html=True)
+        st.markdown("<h6>➀ Vous pouvez sélectionner vos variables explicatives (X) et la variable cible (y)</h6>",
+                    unsafe_allow_html=True)
 
-        # Sélectionner une colonne 'target' comme cible (y)
-        if 'target' not in df.columns:
-            st.error("La colonne 'target' n'existe pas dans le dataset.")
-        else:
-            # Définir la colonne target comme variable cible (y)
-            target = 'target'
-            st.write(f"La variable cible (y) est : {target}")
+        # Initialisation de selected_columns à une liste vide
+        selected_columns = []
 
-            # Filtrer les colonnes numériques pour les variables explicatives (X) en excluant 'target'
-            numeric_columns = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col]) and col != target]
+        # Permettre à l'utilisateur de saisir manuellement la colonne cible (y) via un text input
+        target_input = st.text_input("Entrez le nom de la colonne cible (y)")
 
-            # Vérifier s'il y a des colonnes numériques disponibles
-            if numeric_columns:
-                # Sélection des variables explicatives avec une infobulle
-                selected_columns = st.multiselect(
-                    "Sélectionnez les variables explicatives (X)",
-                    options=numeric_columns,
-                    default=[],
-                    help="Les variables explicatives (X) doivent être numériques et influencent la variable cible (y)."
-                )
+        if target_input:
+            if target_input not in df.columns:
+                st.error(f"La colonne '{target_input}' n'existe pas dans le dataset.")
             else:
-                st.warning("Aucune variable numérique disponible pour les variables explicatives (X).")
+                # Définir la colonne saisie comme variable cible (y)
+                target = target_input
+                st.write(f"La variable cible (y) est : {target}")
+                # Stocker dans la session
+                st.session_state['y'] = df[target_input]
+
+                # Filtrer les colonnes numériques pour les variables explicatives (X) en excluant 'target'
+                numeric_columns = [col for col in df.columns if
+                                   pd.api.types.is_numeric_dtype(df[col]) and col != target]
+
+                # Vérifier s'il y a des colonnes numériques disponibles
+                if numeric_columns:
+                    # Sélection des variables explicatives avec une infobulle
+                    selected_columns = st.multiselect(
+                        "Sélectionnez les variables explicatives (X)",
+                        options=numeric_columns,
+                        default=[],
+                        help="Les variables explicatives (X) doivent être numériques et influencent la variable cible (y)."
+                    )
+
+                    if selected_columns:
+                        st.session_state['X'] = df[selected_columns]
+                    else:
+                        st.warning("Veuillez sélectionner au moins une variable explicative (X).")
+
+                else:
+                    st.warning("Aucune variable numérique disponible pour les variables explicatives (X).")
+        else:
+            st.warning("Veuillez entrer une colonne valide pour la variable cible (y).")
 
         st.markdown("---")
-        st.markdown("<h6>➁ Voici un aperçu sous forme de tableau de vos données sélectionnées ! Si vous êtes sure de votre choix, appuyer sur le bouton 'Valider' en bas de cette page.</h6>", unsafe_allow_html=True)
 
-        # Afficher un message d'avertissement si aucune colonne n'est sélectionnée
-        # Si des colonnes sont sélectionnées, les afficher
-        if selected_columns and target != "Sélectionnez une colonne":
-            # Créer trois colonnes pour simuler une ligne de séparation entre col1 et col2
-            col1, col_space, col2 = st.columns([1, 0.1, 1])
+        st.markdown(
+            "<h6>➁ Voici un aperçu sous forme de tableau de vos données sélectionnées ! Si vous êtes sûr de votre choix, appuyez sur le bouton 'Valider'.</h6>",
+            unsafe_allow_html=True)
 
+        # Afficher les colonnes sélectionnées
+        if selected_columns and target_input:
+            col1, col2, col_space = st.columns([1, 1, 1])
+
+            # Bouton Valider avec une clé unique
             with col1:
-                st.markdown("**Variables explicatives (X) sélectionnées :**")
-                for column in selected_columns:
-                    st.markdown(f"- {column}")
-
-            # col_space pour gérer les espaces entre les colonnes
-
-            with col2:
-                st.markdown("**Cible (y) sélectionnée :**")
-                st.markdown(f"- {target}")
-
-            # Ajouter une ligne horizontale
-            st.markdown("---")
-
-            # Placer le bouton à droite
-            col1, col2, col3 = st.columns([1, 1, 1])
-
-            # Bouton Valider dans la troisième colonne
-            with col1:
-                if st.button("Valider"):
+                if st.button("Valider", key="valider_1"):
                     # Simuler une "pop-up" avec des options de validation
                     st.write("Voulez-vous valider votre sélection ?")
                     confirm = st.radio("", ("OK", "NON"))
@@ -195,8 +201,6 @@ def classification_page():
                     use_column_width=True
                 )
 
-        elif selected_columns and target == "Sélectionnez une colonne":
-            st.warning("Veuillez sélectionner une colonne y.")
         else:
             st.warning("Veuillez sélectionner les colonnes pour X et y.")
 
@@ -219,6 +223,16 @@ def classification_page():
                                for col in df.columns], axis=1
                 )
                 st.dataframe(styled_data)
+
+                # Utiliser HTML pour centrer l'image
+                st.markdown(
+                    """
+                    <div style='text-align: center;'>
+                        <img src="https://cdn-icons-png.flaticon.com/512/467/467262.png" alt="Example image" width="150">
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 st.markdown("<h5 style='color: #FF5733; font-weight: bold;'>Dataset après la sélection (X et y)</h5>",
                             unsafe_allow_html=True)
@@ -649,14 +663,12 @@ def classification_page():
                                                   random_state=random_state)
 
                 if st.button("Lancer Random Forest"):
-                    # Utilisation du spinner pour afficher un message de chargement pendant l'entraînement du modèle
-                    with st.spinner('Entraînement du modèle Random Forest en cours...'):
-                        # Split des données
-                        X_train, X_test, y_train, y_test = train_test_split(st.session_state['X'], st.session_state['y'],
-                                                                            test_size=test_size,
-                                                                            random_state=random_state)
-                        # Entraînement du modèle
-                        model_rf.fit(X_train, y_train)
+                    # Split des données
+                    X_train, X_test, y_train, y_test = train_test_split(st.session_state['X'], st.session_state['y'],
+                                                                        test_size=test_size,
+                                                                        random_state=random_state)
+                    # Entraînement du modèle
+                    model_rf.fit(X_train, y_train)
 
                     # Afficher un message de succès
                     st.success("Le modèle Random Forest a été entraîné avec succès.")
@@ -948,13 +960,98 @@ def classification_page():
             else:
                 st.warning("Veuillez d'abord sélectionner les variables explicatives et la cible dans l'onglet 1.")
 
-    # Onglet 4 : Évaluation
-    with tab4:
-        st.subheader("Évaluation des modèles")
-        # Evaluation des modèles basés sur les résultats de l'entraînement
-        st.write("À implémenter : Sélectionner un modèle pour l'évaluation.")
-
-    # Onglet 5 : Comparaison (vide pour l'instant)
-    with tab5:
-        st.subheader("Comparaison des modèles")
-        st.write("Fonctionnalité à venir.")
+    # # Onglet 4 : Rapport Final
+    # with tab4:
+    #     st.markdown("<h5 style='color: #FF5733; font-weight: bold;'>Rapport Final</h5>", unsafe_allow_html=True)
+    #     st.caption("Ce rapport contient un résumé de tous les modèles entraînés et leurs performances respectives.")
+    #
+    #     # Liste des lignes du rapport pour la génération du fichier texte
+    #     rapport_lines = []
+    #     cv_folds = 5  # Nombre de folds pour la validation croisée
+    #
+    #     # Logistic Regression
+    #     if 'logistic_model' in st.session_state:
+    #         st.subheader("Logistic Regression")
+    #         accuracy_logistic = st.session_state['logistic_model'].score(st.session_state['X_test'],
+    #                                                                      st.session_state['y_test'])
+    #         st.write(f"**Accuracy** : {accuracy_logistic:.4f}")
+    #         rapport_lines.append("Logistic Regression")
+    #         rapport_lines.append(f"Accuracy : {accuracy_logistic:.4f}\n")
+    #
+    #         y_pred_logistic = st.session_state['logistic_model'].predict(st.session_state['X_test'])
+    #         report_logistic = classification_report(st.session_state['y_test'], y_pred_logistic, output_dict=True)
+    #         st.markdown("**F1 Score** :")
+    #         st.write(f"{report_logistic['weighted avg']['f1-score']:.4f}")
+    #         rapport_lines.append(f"F1 Score : {report_logistic['weighted avg']['f1-score']:.4f}\n")
+    #
+    #         # Cross-validation pour Logistic Regression
+    #         mean_cv, std_cv = cross_validation_scores(st.session_state['logistic_model'], st.session_state['X'],
+    #                                                   st.session_state['y'], cv=cv_folds)
+    #         st.write(f"**Validation croisée (Accuracy - {cv_folds} folds)** : {mean_cv:.4f} ± {std_cv:.4f}")
+    #         rapport_lines.append(f"Validation croisée (Accuracy - {cv_folds} folds) : {mean_cv:.4f} ± {std_cv:.4f}\n")
+    #
+    #         # Affichage de la matrice de confusion
+    #         cm_logistic = confusion_matrix(st.session_state['y_test'], y_pred_logistic)
+    #         fig, ax = plt.subplots()
+    #         sns.heatmap(cm_logistic, annot=True, fmt='d', cmap='Blues', ax=ax)
+    #         st.pyplot(fig)
+    #
+    #     # Random Forest
+    #     if 'random_forest_model' in st.session_state:
+    #         st.subheader("Random Forest")
+    #         accuracy_rf = st.session_state['random_forest_model'].score(st.session_state['X_test'],
+    #                                                                     st.session_state['y_test'])
+    #         st.write(f"**Accuracy** : {accuracy_rf:.4f}")
+    #         rapport_lines.append("Random Forest")
+    #         rapport_lines.append(f"Accuracy : {accuracy_rf:.4f}\n")
+    #
+    #         y_pred_rf = st.session_state['random_forest_model'].predict(st.session_state['X_test'])
+    #         report_rf = classification_report(st.session_state['y_test'], y_pred_rf, output_dict=True)
+    #         st.markdown("**F1 Score** :")
+    #         st.write(f"{report_rf['weighted avg']['f1-score']:.4f}")
+    #         rapport_lines.append(f"F1 Score : {report_rf['weighted avg']['f1-score']:.4f}\n")
+    #
+    #         # Cross-validation pour Random Forest
+    #         mean_cv, std_cv = cross_validation_scores(st.session_state['random_forest_model'], st.session_state['X'],
+    #                                                   st.session_state['y'], cv=cv_folds)
+    #         st.write(f"**Validation croisée (Accuracy - {cv_folds} folds)** : {mean_cv:.4f} ± {std_cv:.4f}")
+    #         rapport_lines.append(f"Validation croisée (Accuracy - {cv_folds} folds) : {mean_cv:.4f} ± {std_cv:.4f}\n")
+    #
+    #         # Affichage de la matrice de confusion
+    #         cm_rf = confusion_matrix(st.session_state['y_test'], y_pred_rf)
+    #         fig, ax = plt.subplots()
+    #         sns.heatmap(cm_rf, annot=True, fmt='d', cmap='Blues', ax=ax)
+    #         st.pyplot(fig)
+    #
+    #     # K-NN
+    #     if 'knn_model' in st.session_state:
+    #         st.subheader("K-NN")
+    #         accuracy_knn = st.session_state['knn_model'].score(st.session_state['X_test'], st.session_state['y_test'])
+    #         st.write(f"**Accuracy** : {accuracy_knn:.4f}")
+    #         rapport_lines.append("K-Nearest Neighbors (K-NN)")
+    #         rapport_lines.append(f"Accuracy : {accuracy_knn:.4f}\n")
+    #
+    #         y_pred_knn = st.session_state['knn_model'].predict(st.session_state['X_test'])
+    #         report_knn = classification_report(st.session_state['y_test'], y_pred_knn, output_dict=True)
+    #         st.markdown("**F1 Score** :")
+    #         st.write(f"{report_knn['weighted avg']['f1-score']:.4f}")
+    #         rapport_lines.append(f"F1 Score : {report_knn['weighted avg']['f1-score']:.4f}\n")
+    #
+    #         # Cross-validation pour K-NN
+    #         mean_cv, std_cv = cross_validation_scores(st.session_state['knn_model'], st.session_state['X'],
+    #                                                   st.session_state['y'], cv=cv_folds)
+    #         st.write(f"**Validation croisée (Accuracy - {cv_folds} folds)** : {mean_cv:.4f} ± {std_cv:.4f}")
+    #         rapport_lines.append(f"Validation croisée (Accuracy - {cv_folds} folds) : {mean_cv:.4f} ± {std_cv:.4f}\n")
+    #
+    #         # Affichage de la matrice de confusion
+    #         cm_knn = confusion_matrix(st.session_state['y_test'], y_pred_knn)
+    #         fig, ax = plt.subplots()
+    #         sns.heatmap(cm_knn, annot=True, fmt='d', cmap='Blues', ax=ax)
+    #         st.pyplot(fig)
+    #
+    #     # Génération du rapport final
+    #     if rapport_lines:
+    #         rapport_txt = "\n".join(rapport_lines)
+    #         st.download_button("Télécharger le rapport", rapport_txt, file_name="rapport_final.txt")
+    #     else:
+    #         st.info("Aucun modèle n'a été entraîné pour le moment.")
