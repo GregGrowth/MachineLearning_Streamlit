@@ -331,14 +331,6 @@ def nettoyageData_page():
         # Imputation des données manquantes ###########################################################################
         st.subheader("Imputation des données manquantes")
 
-        action = st.radio(
-            "Choisissez une action pour les données manquantes:",
-            (
-            "Ne rien faire", "Supprimer les lignes avec des données manquantes",
-            "Remplacer les valeurs manquantes"),
-            index = None
-        )
-
         # Créer un DataFrame des données manquantes
         missing_data = df.isnull().sum()  # Compter le nombre de valeurs manquantes
         missing_data = missing_data[missing_data > 0]  # Ne garder que les colonnes avec des données manquantes
@@ -346,180 +338,191 @@ def nettoyageData_page():
             "Nom de la variable": missing_data.index,
             "Nombre de données manquantes": missing_data.values
         })
+        if missing_data.empty:
+            st.write("Aucune donnée manquante détectée.")
 
-        if action == "Ne rien faire":
-            st.warning("Vous avez choisi de ne rien faire. Les données manquantes peuvent poser des problèmes lors de l'analyse ou la modélisation.")
-
-        elif action == "Supprimer les lignes avec des données manquantes":
-            st.error("Attention ! Vous êtes sur le point de supprimer toutes les lignes contenant des données manquantes. Cela peut entraîner une perte de données importante.")
-
-            # Supprimer les lignes contenant des données manquantes
-            df_cleaned = df.dropna()
-            st.write("Données après suppression des lignes avec des valeurs manquantes:")
-            st.write(df_cleaned.head())
-
-            if st.button("Appliquer la suppression"):
-                df = df_cleaned
-                st.session_state['df'] = df_cleaned
-                st.success("Lignes avec données manquantes supprimées avec succès!")
-
-        # Option pour remplacer les valeurs manquantes
-        elif action == "Remplacer les valeurs manquantes":
-            # Sélectionner une colonne avec des valeurs manquantes
-            column_with_missing = st.selectbox(
-                "Sélectionnez une colonne à imputer :", missing_data_df["Nom de la variable"], index=None)
-
-            st.caption("""
-            ### Conseils :
-
-            - **Utiliser l’imputation des valeurs manquantes par la moyenne** :
-                - Si les données sont **symétriques** et **sans valeurs aberrantes (outliers)** : La moyenne est sensible aux valeurs extrêmes, donc elle est préférable dans des jeux de données où il n'y a **pas de valeurs aberrantes** significatives.
-                - Si vous savez que la moyenne est un bon estimateur de la tendance centrale dans votre contexte.
-
-                L'imputation par la moyenne est généralement utilisée pour les variables continues comme l'âge, le revenu, etc.
-
-            - **Utiliser l’imputation des valeurs manquantes par la médiane** :
-                - Si les données sont **asymétriques** ou contiennent des **outliers**.
-                - Si la variable est ordinale ou non continue.
-
-                Pour les variables ordinales (catégories ayant un ordre), l'imputation par la médiane est souvent préférable, car elle prend en compte la position relative des données.
-            """)
-
-            col1, col2 = st.columns([3, 2])
-
-            with col1:
-                # Affichage du boxplot de la variable
-                st.write(f"**Boxplot de la colonne '{column_with_missing}'**")
-                # Affichage graphique du boxplot
-                fig, ax = plt.subplots()
-                sns.boxplot(df[column_with_missing], ax=ax)
-                st.pyplot(fig)
-
-            with col2:
-                # Affichage des statistiques descriptives
-                st.write(f"**Statistiques de la colonne '{column_with_missing}'**")
-                stats = df[column_with_missing].describe()  # Obtenir les statistiques descriptives
-                st.write(stats)  # Affichage des statistiques sous forme de tableau
-
-            methode = st.radio("Choisissez une méthode pour remplacer les données manquantes:",
-            (
-                    "Remplacer les valeurs manquantes par la moyenne",
-                    "Remplacer les valeurs manquantes par la médiane",
-                    "Remplacer les valeurs manquantes par une valeur"),
+        else:
+            action = st.radio(
+                "Choisissez une action pour les données manquantes:",
+                (
+                    "Ne rien faire", "Supprimer les lignes avec des données manquantes",
+                    "Remplacer les valeurs manquantes"),
                 index=None
             )
 
-            if methode == "Remplacer les valeurs manquantes par la moyenne":
+            if action == "Ne rien faire":
+                st.warning("Vous avez choisi de ne rien faire. Les données manquantes peuvent poser des problèmes lors de l'analyse ou la modélisation.")
 
-                if column_with_missing:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        # Avant imputation - Distribution
-                        st.write(f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
-                        fig, ax = plt.subplots()
-                        sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
-                        st.pyplot(fig)
+            elif action == "Supprimer les lignes avec des données manquantes":
+                st.error("Attention ! Vous êtes sur le point de supprimer toutes les lignes contenant des données manquantes. Cela peut entraîner une perte de données importante.")
 
-                    with col2:
-                        try :
-                            # Remplacer les valeurs manquantes par la moyenne
-                            df_imput = df.copy()
-                            mean_value = df_imput[column_with_missing].mean()
-                            df_imput[column_with_missing].fillna(mean_value, inplace=True)
+                # Supprimer les lignes contenant des données manquantes
+                df_cleaned = df.dropna()
+                st.write("Données après suppression des lignes avec des valeurs manquantes:")
+                st.write(df_cleaned.head())
 
-                            # Après imputation - Distribution
-                            st.write(f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par la moyenne**")
+                if st.button("Appliquer la suppression"):
+                    df = df_cleaned
+                    st.session_state['df'] = df_cleaned
+                    st.success("Lignes avec données manquantes supprimées avec succès!")
+
+            # Option pour remplacer les valeurs manquantes
+            elif action == "Remplacer les valeurs manquantes":
+                # Sélectionner une colonne avec des valeurs manquantes
+                column_with_missing = st.selectbox(
+                    "Sélectionnez une colonne à imputer :", missing_data_df["Nom de la variable"], index=None)
+
+                st.caption("""
+                ### Conseils :
+    
+                - **Utiliser l’imputation des valeurs manquantes par la moyenne** :
+                    - Si les données sont **symétriques** et **sans valeurs aberrantes (outliers)** : La moyenne est sensible aux valeurs extrêmes, donc elle est préférable dans des jeux de données où il n'y a **pas de valeurs aberrantes** significatives.
+                    - Si vous savez que la moyenne est un bon estimateur de la tendance centrale dans votre contexte.
+    
+                    L'imputation par la moyenne est généralement utilisée pour les variables continues comme l'âge, le revenu, etc.
+    
+                - **Utiliser l’imputation des valeurs manquantes par la médiane** :
+                    - Si les données sont **asymétriques** ou contiennent des **outliers**.
+                    - Si la variable est ordinale ou non continue.
+    
+                    Pour les variables ordinales (catégories ayant un ordre), l'imputation par la médiane est souvent préférable, car elle prend en compte la position relative des données.
+                """)
+
+                col1, col2 = st.columns([3, 2])
+
+                with col1:
+                    # Affichage du boxplot de la variable
+                    st.write(f"**Boxplot de la colonne '{column_with_missing}'**")
+                    # Affichage graphique du boxplot
+                    fig, ax = plt.subplots()
+                    sns.boxplot(df[column_with_missing], ax=ax)
+                    st.pyplot(fig)
+
+                with col2:
+                    # Affichage des statistiques descriptives
+                    st.write(f"**Statistiques de la colonne '{column_with_missing}'**")
+                    stats = df[column_with_missing].describe()  # Obtenir les statistiques descriptives
+                    st.write(stats)  # Affichage des statistiques sous forme de tableau
+
+                methode = st.radio("Choisissez une méthode pour remplacer les données manquantes:",
+                (
+                        "Remplacer les valeurs manquantes par la moyenne",
+                        "Remplacer les valeurs manquantes par la médiane",
+                        "Remplacer les valeurs manquantes par une valeur"),
+                    index=None
+                )
+
+                if methode == "Remplacer les valeurs manquantes par la moyenne":
+
+                    if column_with_missing:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            # Avant imputation - Distribution
+                            st.write(f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
                             fig, ax = plt.subplots()
-                            sns.histplot(df_imput[column_with_missing], kde=True, ax=ax)
+                            sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
                             st.pyplot(fig)
 
-                        except Exception as e:
-                            # Gestion des autres erreurs éventuelles
-                            st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
+                        with col2:
+                            try :
+                                # Remplacer les valeurs manquantes par la moyenne
+                                df_imput = df.copy()
+                                mean_value = df_imput[column_with_missing].mean()
+                                df_imput[column_with_missing].fillna(mean_value, inplace=True)
+
+                                # Après imputation - Distribution
+                                st.write(f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par la moyenne**")
+                                fig, ax = plt.subplots()
+                                sns.histplot(df_imput[column_with_missing], kde=True, ax=ax)
+                                st.pyplot(fig)
+
+                            except Exception as e:
+                                # Gestion des autres erreurs éventuelles
+                                st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
 
 
-                if st.button("Appliquer l'imputation par la moyenne"):
-                    df = df_imput
-                    st.session_state['df'] = df
-                    st.success(
-                        f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la moyenne ({mean_value}) avec succès!")
+                    if st.button("Appliquer l'imputation par la moyenne"):
+                        df = df_imput
+                        st.session_state['df'] = df
+                        st.success(
+                            f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la moyenne ({mean_value}) avec succès!")
 
-            # Option pour remplacer les valeurs manquantes par la mediane
-            elif methode == "Remplacer les valeurs manquantes par la médiane":
+                # Option pour remplacer les valeurs manquantes par la mediane
+                elif methode == "Remplacer les valeurs manquantes par la médiane":
 
-                if column_with_missing:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        # Avant imputation - Distribution
-                        st.write(
-                            f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
-                        fig, ax = plt.subplots()
-                        sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
-                        st.pyplot(fig)
-
-                    with col2:
-                        try :
-                            # Remplacer les valeurs manquantes par la médiane
-                            df_imput = df.copy()
-                            med_value = df_imput[column_with_missing].med()
-                            df_imput[column_with_missing].fillna(med_value, inplace=True)
-
-                            # Après imputation - Distribution
+                    if column_with_missing:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            # Avant imputation - Distribution
                             st.write(
-                                f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par la médiane**")
+                                f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
                             fig, ax = plt.subplots()
-                            sns.histplot(df_imput[column_with_missing], kde=True, ax=ax)
+                            sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
                             st.pyplot(fig)
 
-                        except Exception as e:
-                            # Gestion des autres erreurs éventuelles
-                            st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
+                        with col2:
+                            try :
+                                # Remplacer les valeurs manquantes par la médiane
+                                df_imput = df.copy()
+                                med_value = df_imput[column_with_missing].med()
+                                df_imput[column_with_missing].fillna(med_value, inplace=True)
 
-                if st.button("Appliquer l'imputation par la médiane"):
-                    df = df_imput
-                    st.session_state['df'] = df
-                    st.success(
-                        f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la médiane ({med_value}) avec succès!")
+                                # Après imputation - Distribution
+                                st.write(
+                                    f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par la médiane**")
+                                fig, ax = plt.subplots()
+                                sns.histplot(df_imput[column_with_missing], kde=True, ax=ax)
+                                st.pyplot(fig)
 
-            # Option pour remplacer les valeurs manquantes par une valeur
-            elif methode == "Remplacer les valeurs manquantes par une valeur":
+                            except Exception as e:
+                                # Gestion des autres erreurs éventuelles
+                                st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
 
-                # Option pour remplacer les valeurs manquantes
-                fill_value = st.text_input("Entrez une valeur pour remplacer les données manquantes:")
+                    if st.button("Appliquer l'imputation par la médiane"):
+                        df = df_imput
+                        st.session_state['df'] = df
+                        st.success(
+                            f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la médiane ({med_value}) avec succès!")
 
-                if column_with_missing:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        # Avant imputation - Distribution
-                        st.write(
-                            f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
-                        fig, ax = plt.subplots()
-                        sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
-                        st.pyplot(fig)
+                # Option pour remplacer les valeurs manquantes par une valeur
+                elif methode == "Remplacer les valeurs manquantes par une valeur":
 
-                    with col2:
-                        try:
-                            # Remplacer les valeurs manquantes par une valeur
-                            df_filled = df.copy()
-                            df_filled = df_filled.fillna(fill_value)
+                    # Option pour remplacer les valeurs manquantes
+                    fill_value = st.text_input("Entrez une valeur pour remplacer les données manquantes:")
 
-                            # Après imputation - Distribution
+                    if column_with_missing:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            # Avant imputation - Distribution
                             st.write(
-                                f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par une valeur**")
+                                f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
                             fig, ax = plt.subplots()
-                            sns.histplot(df_filled[column_with_missing], kde=True, ax=ax)
+                            sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
                             st.pyplot(fig)
 
-                        except Exception as e:
-                            # Gestion des autres erreurs éventuelles
-                            st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
+                        with col2:
+                            try:
+                                # Remplacer les valeurs manquantes par une valeur
+                                df_filled = df.copy()
+                                df_filled = df_filled.fillna(fill_value)
+
+                                # Après imputation - Distribution
+                                st.write(
+                                    f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par une valeur**")
+                                fig, ax = plt.subplots()
+                                sns.histplot(df_filled[column_with_missing], kde=True, ax=ax)
+                                st.pyplot(fig)
+
+                            except Exception as e:
+                                # Gestion des autres erreurs éventuelles
+                                st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
 
 
-                if st.button("Appliquer l'imputation par une valeur"):
-                    df = df_filled
-                    st.session_state['df'] = df
-                    st.success(
-                        f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la valeur '{fill_value}' avec succès!")
+                    if st.button("Appliquer l'imputation par une valeur"):
+                        df = df_filled
+                        st.session_state['df'] = df
+                        st.success(
+                            f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la valeur '{fill_value}' avec succès!")
 
         st.markdown("---")
         # Normalisation des données #########################################################################
