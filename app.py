@@ -12,6 +12,34 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Logo diginamic
+st.logo("https://studl.com/assets/uploads/evenement/image6058c34c4b8a77.08689920.png")
+
+# Barre horizontale en haut
+st.markdown("""
+    <style>
+    .top-bar {
+        background-color: #F0F2F6;
+        padding: 10px;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: right;
+    }
+    .top-bar a {
+        margin: 0 30px;
+        text-decoration: none;
+        color: #F90100;
+    }
+    .top-bar a:hover {
+        color: #0056b3;
+    }
+    </style>
+    <div class="top-bar">
+        <a href="#readme" target="_self">README</a> |
+        <a href="https://github.com/mkunegel/ProjetML" target="_blank">Lien GitHub du projet ML</a>
+    </div>
+    """, unsafe_allow_html=True)
+
 st.markdown("# Projet Machine Learning 🎈")
 st.sidebar.markdown("# Main page 🎈")
 
