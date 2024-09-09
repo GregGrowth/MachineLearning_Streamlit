@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import io
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def nettoyageData_page():
@@ -151,6 +153,23 @@ def nettoyageData_page():
                 hide_index=True,
             )
 
+        # Suppression des données ######################################################################################
+        st.subheader("Suppression des colonnes")
+        columns = df.columns.tolist()
+        column_to_drop = st.multiselect("Sélectionnez les colonnes à supprimer", columns)
+        df_supp = df.copy()
+        if len(column_to_drop) > 0:
+            df_supp = df_supp.drop(columns=column_to_drop)
+            st.write(f"Données après suppression des colonnes {column_to_drop}:")
+            st.write(df_supp.head())
+
+            if st.button("Appliquer la suppression"):
+                # Enregistrer les données encodées dans la session
+                # Supprimer la colonne d'origine et concaténer la variable encodée
+                df = df_supp
+                st.session_state['df'] = df
+                st.success(f"La variable '{column_to_drop}' a été supprimé avec succès!")
+
         # Détection des données non numériques #########################################################################
         st.subheader("Détection des données non numériques")
         categorical_columns = df.select_dtypes(exclude=['number']).columns
@@ -163,6 +182,49 @@ def nettoyageData_page():
         else:
             st.write("Aucune donnée non numérique détectée.")
 
+        # Modification des données #####################################################################################
+        st.subheader("Modification des données")
+
+        # Sélectionner la variable à modifier
+        selected_var = st.selectbox("Choisissez une variable à modifier :", df.columns, index=None)
+
+        df_modif = df.copy()
+        if selected_var:
+            # Afficher la distribution des valeurs
+            st.write(f"**Value Counts pour {selected_var} :**")
+            st.write(df_modif[selected_var].value_counts())
+
+            # Input pour les anciennes et nouvelles valeurs
+            st.write(f"Modification manuelle de la variable {selected_var} avec `replace()`")
+            oldValue = st.text_input(f"Quel est le mot à remplacer dans la colonne {selected_var} ?",
+                                     placeholder="Ancienne valeur")
+
+            newValue = st.text_input(
+                f"Quel est le champ que vous souhaitez mettre à la place de {oldValue} dans la colonne {selected_var} ?",
+                placeholder="Nouvelle valeur")
+
+            # Ajouter une case à cocher pour confirmer
+            confirm_change = st.checkbox("Je confirme la modification", key="confirm_change")
+            if confirm_change:
+                if oldValue and newValue:
+
+                    # Effectuer le remplacement manuel dans les autres cas
+                    df_modif[selected_var].replace(oldValue, newValue, inplace=True)
+                    st.write(
+                        f"Remplacement de `{oldValue}` par `{newValue}` effectué dans la colonne {selected_var}.")
+
+                    # Aperçu des modifications
+                    st.write("Aperçu des modifications :")
+                    st.write(df_modif[selected_var])
+
+                else:
+                    st.warning("Veuillez remplir à la fois l'ancienne et la nouvelle valeur.")
+
+            if st.button("Appliquer la modification"):
+                # Enregistrer les données encodées dans la session
+                df = df_modif
+                st.session_state['df'] = df
+                st.success(f"Modification appliquée avec succès pour {selected_var} !")
 
         # Encodage des variables catégorielles #########################################################################
         st.subheader("Encodage des variables catégorielles")
@@ -179,7 +241,8 @@ def nettoyageData_page():
                 # Choisir une méthode d'encodage
                 encoding_method = st.radio(
                     "Choisissez une méthode d'encodage :",
-                    ("get_dummies", "OneHotEncoder", "OrdinalEncoder", "LabelEncoder")
+                    ("get_dummies", "OneHotEncoder", "OrdinalEncoder", "LabelEncoder"),
+                    index = None
                 )
 
                 # Encodage en fonction de la méthode choisie
@@ -233,91 +296,224 @@ def nettoyageData_page():
                     # Supprimer la colonne d'origine et concaténer la variable encodée
                     df = pd.concat([df_encoded.drop(columns=[selected_var]), var_encoded], axis=1)
                     st.session_state['df'] = df
-                    st.success(f"Encodage de {selected_var} appliqué avec succès!")
+                    st.success(f"Encodage de la variable '{selected_var}' appliqué avec succès!")
         else:
             st.write("Aucune donnée non numérique à encodée.")
 
-        # Suppression des données ######################################################################################
-        st.subheader("Suppression des colonnes")
-        columns = df.columns.tolist()
-        column_to_drop = st.multiselect("Sélectionnez les colonnes à supprimer", columns)
-        df_supp = df.copy()
-        if len(column_to_drop) > 0:
-            df_supp = df_supp.drop(columns=column_to_drop)
-            st.write(f"Données après suppression des colonnes {column_to_drop}:")
-            st.write(df_supp.head())
+        # Détection des données manquantes #############################################################################
+        st.subheader("Détection des données manquantes")
+
+        missing_data = df.isnull().sum()  # Compter le nombre de valeurs manquantes
+        missing_data = missing_data[missing_data > 0]  # Ne garder que les colonnes avec des données manquantes
+
+        if not missing_data.empty:
+            # Créer un DataFrame des données manquantes
+            missing_data_df = pd.DataFrame({
+                "Nom de la variable": missing_data.index,
+                "Nombre de données manquantes": missing_data.values
+            })
+
+            st.write(
+                f"La base de données contient {missing_data_df.shape[0]} colonnes avec des données manquantes.")
+            st.write(missing_data_df)
+
+        else:
+            st.write("Aucune donnée manquante détectée.")
+
+        # Imputation des données manquantes ###########################################################################
+        st.subheader("Imputation des données manquantes")
+
+        action = st.radio(
+            "Choisissez une action pour les données manquantes:",
+            (
+            "Ne rien faire", "Supprimer les lignes avec des données manquantes",
+            "Remplacer les valeurs manquantes"),
+            index = None
+        )
+
+        # Créer un DataFrame des données manquantes
+        missing_data = df.isnull().sum()  # Compter le nombre de valeurs manquantes
+        missing_data = missing_data[missing_data > 0]  # Ne garder que les colonnes avec des données manquantes
+        missing_data_df = pd.DataFrame({
+            "Nom de la variable": missing_data.index,
+            "Nombre de données manquantes": missing_data.values
+        })
+
+        if action == "Ne rien faire":
+            st.warning("Vous avez choisi de ne rien faire. Les données manquantes peuvent poser des problèmes lors de l'analyse ou la modélisation.")
+
+        elif action == "Supprimer les lignes avec des données manquantes":
+            st.error("Attention ! Vous êtes sur le point de supprimer toutes les lignes contenant des données manquantes. Cela peut entraîner une perte de données importante.")
+
+            # Supprimer les lignes contenant des données manquantes
+            df_cleaned = df.dropna()
+            st.write("Données après suppression des lignes avec des valeurs manquantes:")
+            st.write(df_cleaned.head())
 
             if st.button("Appliquer la suppression"):
-                # Enregistrer les données encodées dans la session
-                # Supprimer la colonne d'origine et concaténer la variable encodée
-                df = df_supp
-                st.session_state['df'] = df
-                st.success(f"La variable '{column_to_drop}' a été supprimé avec succès!")
+                df = df_cleaned
+                st.session_state['df'] = df_cleaned
+                st.success("Lignes avec données manquantes supprimées avec succès!")
 
-        # Modification des données #####################################################################################
-        st.subheader("Modification des données")
+        # Option pour remplacer les valeurs manquantes
+        elif action == "Remplacer les valeurs manquantes":
+            # Sélectionner une colonne avec des valeurs manquantes
+            column_with_missing = st.selectbox(
+                "Sélectionnez une colonne à imputer :", missing_data_df["Nom de la variable"], index=None)
 
-        # Sélectionner la variable à modifier
-        selected_var = st.selectbox("Choisissez une variable à modifier :", df.columns, index=None)
+            st.caption("""
+            ### Conseils :
 
-        df_modif = df.copy()
-        if selected_var:
-            # Afficher la distribution des valeurs
-            st.write(f"**Value Counts pour {selected_var} :**")
-            st.write(df_modif[selected_var].value_counts())
+            - **Utiliser l’imputation des valeurs manquantes par la moyenne** :
+                - Si les données sont **symétriques** et **sans valeurs aberrantes (outliers)** : La moyenne est sensible aux valeurs extrêmes, donc elle est préférable dans des jeux de données où il n'y a **pas de valeurs aberrantes** significatives.
+                - Si vous savez que la moyenne est un bon estimateur de la tendance centrale dans votre contexte.
 
-            # Input pour les anciennes et nouvelles valeurs
-            st.write(f"Modification manuelle de la variable {selected_var} avec `replace()`")
-            oldValue = st.text_input(f"Quel est le mot à remplacer dans la colonne {selected_var} ?",
-                                     placeholder="Ancienne valeur")
+                L'imputation par la moyenne est généralement utilisée pour les variables continues comme l'âge, le revenu, etc.
 
-            newValue = st.text_input(
-                f"Quel est le champ que vous souhaitez mettre à la place de {oldValue} dans la colonne {selected_var} ?",
-                placeholder="Nouvelle valeur")
+            - **Utiliser l’imputation des valeurs manquantes par la médiane** :
+                - Si les données sont **asymétriques** ou contiennent des **outliers**.
+                - Si la variable est ordinale ou non continue.
 
-            # Ajouter une case à cocher pour confirmer
-            confirm_change = st.checkbox("Je confirme la modification", key="confirm_change")
-            if confirm_change:
-                if oldValue and newValue:
+                Pour les variables ordinales (catégories ayant un ordre), l'imputation par la médiane est souvent préférable, car elle prend en compte la position relative des données.
+            """)
 
-                    # Effectuer le remplacement manuel dans les autres cas
-                    df_modif[selected_var].replace(oldValue, newValue, inplace=True)
-                    st.write(
-                        f"Remplacement de `{oldValue}` par `{newValue}` effectué dans la colonne {selected_var}.")
+            col1, col2 = st.columns([3, 2])
 
-                    # Aperçu des modifications
-                    st.write("Aperçu des modifications :")
-                    st.write(df_modif[selected_var])
+            with col1:
+                # Affichage du boxplot de la variable
+                st.write(f"**Boxplot de la colonne '{column_with_missing}'**")
+                # Affichage graphique du boxplot
+                fig, ax = plt.subplots()
+                sns.boxplot(df[column_with_missing], ax=ax)
+                st.pyplot(fig)
 
-                else:
-                    st.warning("Veuillez remplir à la fois l'ancienne et la nouvelle valeur.")
+            with col2:
+                # Affichage des statistiques descriptives
+                st.write(f"**Statistiques de la colonne '{column_with_missing}'**")
+                stats = df[column_with_missing].describe()  # Obtenir les statistiques descriptives
+                st.write(stats)  # Affichage des statistiques sous forme de tableau
 
-            if st.button("Appliquer la modification"):
-                # Enregistrer les données encodées dans la session
-                df = df_modif
-                st.session_state['df'] = df
-                st.success(f"Modification appliquée avec succès pour {selected_var} !")
+            methode = st.radio("Choisissez une méthode pour remplacer les données manquantes:",
+            (
+                    "Remplacer les valeurs manquantes par la moyenne",
+                    "Remplacer les valeurs manquantes par la médiane",
+                    "Remplacer les valeurs manquantes par une valeur"),
+                index=None
+            )
 
-        # # Détection des données manquantes ###########################################################################
-        # st.subheader("Détection des données manquantes")
-        # missing_data = df.isnull().sum()
-        # st.write(f"La base de données est composée de {missing_data.values.sum()} données manquantes")
-        # missing_data = missing_data[missing_data > 0]
-        # if not missing_data.empty:
-        #     missing_data_df = pd.DataFrame({
-        #         "Nom de la variable": missing_data.index,
-        #         "Nombre de données manquantes": missing_data.values
-        #     })
-        #     st.write(missing_data_df)
-        # else:
-        #     st.write("Aucune donnée manquante détectée.")
-        #
-        # # Options de nettoyage #######################################################################################
-        # st.subheader("Imputation des données manquantes")
-        # if st.checkbox("Supprimer les lignes avec des valeurs manquantes"):
-        #     data = df.dropna()
-        #     st.write("Données après suppression des valeurs manquantes :")
-        #     st.write(data.head())
+            if methode == "Remplacer les valeurs manquantes par la moyenne":
 
+                if column_with_missing:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        # Avant imputation - Distribution
+                        st.write(f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
+                        fig, ax = plt.subplots()
+                        sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
+                        st.pyplot(fig)
+
+                    with col2:
+                        try :
+                            # Remplacer les valeurs manquantes par la moyenne
+                            df_imput = df.copy()
+                            mean_value = df_imput[column_with_missing].mean()
+                            df_imput[column_with_missing].fillna(mean_value, inplace=True)
+
+                            # Après imputation - Distribution
+                            st.write(f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par la moyenne**")
+                            fig, ax = plt.subplots()
+                            sns.histplot(df_imput[column_with_missing], kde=True, ax=ax)
+                            st.pyplot(fig)
+
+                        except Exception as e:
+                            # Gestion des autres erreurs éventuelles
+                            st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
+
+
+                if st.button("Appliquer l'imputation par la moyenne"):
+                    df = df_imput
+                    st.session_state['df'] = df
+                    st.success(
+                        f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la moyenne ({mean_value}) avec succès!")
+
+            # Option pour remplacer les valeurs manquantes par la mediane
+            elif methode == "Remplacer les valeurs manquantes par la médiane":
+
+                if column_with_missing:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        # Avant imputation - Distribution
+                        st.write(
+                            f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
+                        fig, ax = plt.subplots()
+                        sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
+                        st.pyplot(fig)
+
+                    with col2:
+                        try :
+                            # Remplacer les valeurs manquantes par la médiane
+                            df_imput = df.copy()
+                            med_value = df_imput[column_with_missing].med()
+                            df_imput[column_with_missing].fillna(med_value, inplace=True)
+
+                            # Après imputation - Distribution
+                            st.write(
+                                f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par la médiane**")
+                            fig, ax = plt.subplots()
+                            sns.histplot(df_imput[column_with_missing], kde=True, ax=ax)
+                            st.pyplot(fig)
+
+                        except Exception as e:
+                            # Gestion des autres erreurs éventuelles
+                            st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
+
+                if st.button("Appliquer l'imputation par la médiane"):
+                    df = df_imput
+                    st.session_state['df'] = df
+                    st.success(
+                        f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la médiane ({med_value}) avec succès!")
+
+            # Option pour remplacer les valeurs manquantes par une valeur
+            elif methode == "Remplacer les valeurs manquantes par une valeur":
+
+                # Option pour remplacer les valeurs manquantes
+                fill_value = st.text_input("Entrez une valeur pour remplacer les données manquantes:")
+
+                if column_with_missing:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        # Avant imputation - Distribution
+                        st.write(
+                            f"**Distribution de la colonne '{column_with_missing}' avant l'imputation des données manquantes**")
+                        fig, ax = plt.subplots()
+                        sns.histplot(df[column_with_missing].dropna(), kde=True, ax=ax)
+                        st.pyplot(fig)
+
+                    with col2:
+                        try:
+                            # Remplacer les valeurs manquantes par une valeur
+                            df_filled = df.copy()
+                            df_filled = df_filled.fillna(fill_value)
+
+                            # Après imputation - Distribution
+                            st.write(
+                                f"**Distribution de la colonne '{column_with_missing}' après imputation des données manquantes par une valeur**")
+                            fig, ax = plt.subplots()
+                            sns.histplot(df_filled[column_with_missing], kde=True, ax=ax)
+                            st.pyplot(fig)
+
+                        except Exception as e:
+                            # Gestion des autres erreurs éventuelles
+                            st.error(f"Une erreur inattendue s'est produite lors de l'imputation. Détail de l'erreur : {e}")
+
+
+                if st.button("Appliquer l'imputation par une valeur"):
+                    df = df_filled
+                    st.session_state['df'] = df
+                    st.success(
+                        f"Valeurs manquantes de la colonne '{column_with_missing}' remplacées par la valeur '{fill_value}' avec succès!")
+
+        # Normalisation des données #########################################################################
+        st.subheader("Normalisation des données")
     else:
-        st.write("Aucune donnée n'a été chargée. Veuillez charger les données via la page Source de données.")
+            st.write("Aucune donnée n'a été chargée. Veuillez charger les données via la page Source de données.")
