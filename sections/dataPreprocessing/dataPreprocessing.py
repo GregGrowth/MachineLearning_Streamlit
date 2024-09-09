@@ -733,9 +733,15 @@ def nettoyageData_page():
                 else:
                     st.warning("La variable est déséquilibrée. Choisissez une méthode de rééchantillonnage.")
 
+                    expander = st.expander("Quelle méthode choisir ?")
+                    expander.markdown("""
+                     - SOUS ECHANTILLONAGE (ROS) à utiliser quand on a énormément de données (1M+)
+                     - SUR ECHANTILLONAGE (SMOTE) à utiliser quand on a pas beaucoup de données
+                     """)
+
                     # Proposer une méthode de rééchantillonnage
                     resampling_method = st.radio("Méthode de rééchantillonnage :",
-                                                 ("Sur-échantillonnage", "Sous-échantillonnage"))
+                                                 ("Sur-échantillonnage", "Sous-échantillonnage"), index = None)
                     df_resampled = []
                     if resampling_method == "Sur-échantillonnage":
                         sm = SMOTE(random_state=0)
