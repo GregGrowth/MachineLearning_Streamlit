@@ -14,6 +14,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 
 
+# TEST PUSH 2
+
 # Fonction principale pour la classification
 def classification_page():
     # Vérifier si df est déjà chargé dans st.session_state
