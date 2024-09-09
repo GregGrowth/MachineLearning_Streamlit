@@ -133,4 +133,3 @@ def nail_page():
             annotated_image = draw_predictions(image.copy(), result)
             st.image(annotated_image, caption='Image avec détections', use_column_width=True)
 
-
