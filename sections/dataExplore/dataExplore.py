@@ -62,7 +62,7 @@ def apercuData_page():
 
         # Sous-onglet 1 : Preview & Stats descriptives
         with subtab1:
-            st.markdown("<h5 style='color: #FF5733; font-weight: bold;'>Dataset</h5>",
+            st.markdown("<h5 style='color: #FF5733; font-weight: bold;'>Dataset avant la sélection</h5>",
                         unsafe_allow_html=True)
 
             # Afficher le dataset entier avec des couleurs pour les colonnes X et y
