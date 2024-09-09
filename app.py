@@ -2,6 +2,7 @@ import streamlit as st
 from sections.dataImport.dataImport import sourceData_page
 from sections.dataPreprocessing.dataPreprocessing import nettoyageData_page
 from sections.classification.classification import classification_page
+from sections.dataExplore.dataExplore import apercuData_page
 from sections.nailsdetection.nails import nail_page
 from sections.regression.regression import regression_page
 
@@ -47,7 +48,7 @@ st.sidebar.markdown("# Main page 🎈")
 st.sidebar.title("Navigation")
 page = st.sidebar.selectbox(
     "Choisissez une page",
-    ["Accueil", "Source de données", "Nettoyage des données", "Playground"]
+    ["Accueil", "Source de données", "Nettoyage des données", "Aperçu du dataset", "Playground"]
 )
 
 # Gestion des pages
@@ -58,6 +59,8 @@ elif page == "Source de données":
     sourceData_page()  # Appel de la page pour l'import des données
 elif page == "Nettoyage des données":
     nettoyageData_page()  # Appel de la page pour le nettoyage des données
+elif page == "Aperçu du dataset":
+    apercuData_page()  # Appel de la page pour l'aperçu des données
 elif page == "Playground":
 
     type_ml = st.sidebar.radio(
