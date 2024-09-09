@@ -267,10 +267,63 @@ def show_xgboost(X_train, X_test, y_train, y_test, random_state):
             ax.set_title('Importance des Caractéristiques')
             st.pyplot(fig)
 
-# Fonction pour le lazy regressor
+
+# Fonction principale pour afficher le Lazy Regressor
 def show_lazy_regressor(X_train, X_test, y_train, y_test):
-    st.caption("LazyRegressor permet de déterminer rapidement les modèles les plus adaptés à vos données")
-    if st.button("Lancer un LazyRegressor"):
-        reg = LazyRegressor()
-        models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+    st.caption("LazyRegressor")
+    st.info("Le LazyRegressor permet de tester plusieurs modèles et identifier ceux qui s'adaptent le mieux à nos données.")
+
+    # Bouton pour lancer LazyRegressor
+    if st.button("Lancer LazyRegressor"):
+        with st.spinner('Calcul des performances des modèles en cours...'):
+            reg = LazyRegressor()
+            models, predictions = reg.fit(X_train, X_test, y_train, y_test)
+
+        st.success("Modèles évalués avec succès!")
         st.dataframe(models)
+
+        # Interprétation basique des résultats
+        best_model = models.index[0]
+        st.write(
+            f"Le modèle qui semble le plus performant est : **{best_model}** avec un coefficient de détermination (R²) de {models.loc[best_model, 'R-Squared']}.")
+
+        # Explications des métriques
+        st.subheader("Explication des métriques")
+        st.write("""
+            - **R² (Coefficient de détermination)** : Mesure la proportion de variance expliquée par le modèle. Un R² de 1 signifie que le modèle explique parfaitement les données, tandis qu'un R² de 0 indique que le modèle n'explique aucune variance.
+            - **R² ajusté** : Comme le R², mais ajusté pour le nombre de prédicteurs dans le modèle. Il pénalise les modèles qui utilisent trop de variables non pertinentes.
+            - **RMSE (Root Mean Squared Error)** : Indique la racine carrée de l'erreur quadratique moyenne. Plus la RMSE est faible, plus les prédictions du modèle sont proches des valeurs réelles.
+        """)
+
+        # Affichage sous forme de DataFrame des 3 meilleurs modèles
+        st.subheader("Top 3 des meilleurs modèles :")
+        top_3 = models.head(3)[['R-Squared', 'Adjusted R-Squared', 'RMSE', 'Time Taken']]
+        st.dataframe(top_3)
+
+        # Comparaison des 3 meilleurs modèles avec des graphiques dans deux colonnes
+        st.subheader("Comparaison des 3 meilleurs modèles")
+
+        # Création des colonnes
+        col1, col2 = st.columns(2)
+
+        # Graphique de comparaison des RMSE dans la première colonne
+        with col1:
+            fig1, ax1 = plt.subplots()
+            sns.barplot(x=top_3.index, y=top_3['RMSE'], ax=ax1)
+            for i, value in enumerate(top_3['RMSE']):
+                ax1.text(i, value, round(value, 2), ha='center', va='bottom')
+            ax1.set_title("Comparaison des RMSE")
+            ax1.set_ylabel("RMSE")
+            ax1.set_xlabel("Modèles")
+            st.pyplot(fig1)
+
+        # Graphique de comparaison des R² dans la deuxième colonne
+        with col2:
+            fig2, ax2 = plt.subplots()
+            sns.barplot(x=top_3.index, y=top_3['R-Squared'], ax=ax2)
+            for i, value in enumerate(top_3['R-Squared']):
+                ax2.text(i, value, round(value, 4), ha='center', va='bottom')
+            ax2.set_title("Comparaison des R²")
+            ax2.set_ylabel("R²")
+            ax2.set_xlabel("Modèles")
+            st.pyplot(fig2)
