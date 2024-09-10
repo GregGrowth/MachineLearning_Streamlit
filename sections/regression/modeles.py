@@ -118,25 +118,32 @@ def show_lasso_model(X_train, X_test, y_train, y_test):
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        residuals = y_test - y_pred
-                        fig, ax = plt.subplots()
-                        ax.scatter(y_pred, residuals, alpha=0.5)
-                        ax.axhline(y=0, color='red', linestyle='--')
-                        ax.set_xlabel('Valeurs Prédites (y_pred)')
-                        ax.set_ylabel('Résidus')
-                        ax.set_title('Graphique des Résidus pour Régression Lasso', loc='center')
-                        st.pyplot(fig)
+                        residuals = y_test - y_pred  # Calcul des résidus
+                        fig, ax = plt.subplots()  # Création de la figure
+                        ax.scatter(y_pred, residuals, alpha=0.5)  # Nuage de points (valeurs prédites vs résidus)
+                        ax.axhline(y=0, color='red', linestyle='--')  # Ligne rouge indiquant 0 (résidu nul)
+                        ax.set_xlabel('Valeurs Prédites (y_pred)')  # Etiquette pour l'axe des X
+                        ax.set_ylabel('Résidus')  # Etiquette pour l'axe des Y
+                        ax.set_title('Graphique des Résidus pour Régression Lasso', loc='center')  # Titre du graphique
+                        st.pyplot(fig)  # Affichage du graphique avec Streamlit
 
                     with col2:
-                        alphas, coefs, _ = lasso_path(X_train, y_train, alphas=np.logspace(-4, 4, 100))
                         fig, ax = plt.subplots()
-                        for i in range(coefs.shape[0]):
-                            ax.plot(np.log10(alphas), coefs[i, :], label=X_train.columns[i])
-                        ax.set_xlabel('Log10(Alpha)')
-                        ax.set_ylabel('Coefficients')
-                        ax.set_title('Chemin de Régularisation (Lasso Path)', loc='center')
+
+                        # Scatter plot des valeurs observées vs prédictions
+                        ax.scatter(y_test, y_pred, alpha=0.5, label='Données')
+
+                        # Ajout d'une ligne de régression (y=x) pour indiquer un ajustement parfait
+                        ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--',
+                                label='y = x (ajustement parfait)')
+
+                        # Mise en forme du graphique
+                        ax.set_xlabel('Valeurs Réelles (y_test)')
+                        ax.set_ylabel('Valeurs Prédites (y_pred)')
+                        ax.set_title('Droite de Régression pour Régression Lasso')
                         ax.legend()
-                        st.pyplot(fig)
+
+                        st.pyplot(fig)  # Affichage du graphique dans Streamlit
         except ValueError:
             st.error("Veuillez entrer une valeur numérique valide pour alpha.")
     else:
@@ -269,6 +276,16 @@ def show_extra_trees(X_train, X_test, y_train, y_test, random_state):
             sns.barplot(x=feature_importances, y=features, ax=ax)
             ax.set_title('Importance des Caractéristiques')
             st.pyplot(fig)
+
+        st.write("""
+        Le BMI (Indice de Masse Corporelle) et le S5 (logarithme des triglycérides) se révèlent être les caractéristiques les plus influentes.
+
+        Un BMI élevé est un indicateur majeur d'obésité, souvent associée au diabète de type 2. L'obésité est liée à des déséquilibres métaboliques qui augmentent le risque de développer le diabète.
+
+        De même, des niveaux élevés de triglycérides (capturés par S5) sont fréquemment liés à des déséquilibres métaboliques et cardiovasculaires. Ces déséquilibres sont étroitement associés au diabète, car ils reflètent des anomalies dans la gestion des graisses par le corps.
+        """)
+
+
 # Fonction pour l'xgboost
 def show_xgboost(X_train, X_test, y_train, y_test, random_state):
     st.caption("XGBoost Regressor")
@@ -370,6 +387,14 @@ def show_xgboost(X_train, X_test, y_train, y_test, random_state):
             sns.barplot(x=feature_importances, y=features, ax=ax)
             ax.set_title('Importance des Caractéristiques')
             st.pyplot(fig)
+
+        st.write("""
+                Le BMI (Indice de Masse Corporelle) et le S5 (logarithme des triglycérides) se révèlent être les caractéristiques les plus influentes.
+
+                Un BMI élevé est un indicateur majeur d'obésité, souvent associée au diabète de type 2. L'obésité est liée à des déséquilibres métaboliques qui augmentent le risque de développer le diabète.
+
+                De même, des niveaux élevés de triglycérides (capturés par S5) sont fréquemment liés à des déséquilibres métaboliques et cardiovasculaires. Ces déséquilibres sont étroitement associés au diabète, car ils reflètent des anomalies dans la gestion des graisses par le corps.
+                """)
 
 # Fonction principale pour afficher le Lazy Regressor
 def show_lazy_regressor(X_train, X_test, y_train, y_test):
