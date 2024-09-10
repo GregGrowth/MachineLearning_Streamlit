@@ -710,6 +710,8 @@ def nettoyageData_page():
         # Section Équilibrage de la variable ciblée
         st.subheader("Équilibrage de la variable ciblée")
 
+        st.captions("L'équilibrage des données est disponible uniquement pour des variables binaires ou catégorielles avec moins de 20 modalités et elles doivent être de type 'object'")
+
         # Sélection de la variable cible
         # Permettre à l'utilisateur de saisir manuellement la colonne cible (y) via un text input
         target_column = st.text_input("Entrez le nom de la variable à équilibré cible (y)")
@@ -793,7 +795,11 @@ def nettoyageData_page():
                                 st.session_state['df'] = df
                                 st.success("Données rééchantillonnées avec succès!")
                 else:
-                    st.warning("La variable sélectionnée n'est pas catégorielle ou contient trop de classes.")
+                    try:
+                        st.warning("La variable sélectionnée n'est pas catégorielle ou contient trop de classes.")
+                    except Exception as e:
+                        # Gestion des autres erreurs éventuelles
+                        st.error(f"Une erreur inattendue s'est produite lors du rééchantionnage des données. Détail de l'erreur : {e}")
         else:
             st.warning("Veuillez entrer une colonne valide pour la variable cible (y).")
 
