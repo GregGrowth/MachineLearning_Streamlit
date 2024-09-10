@@ -710,79 +710,98 @@ def nettoyageData_page():
         # Section Équilibrage de la variable ciblée
         st.subheader("Équilibrage de la variable ciblée")
 
+        st.captions("L'équilibrage des données est disponible uniquement pour des variables binaires ou catégorielles avec moins de 20 modalités et elles doivent être de type 'object'")
+
         # Sélection de la variable cible
-        target_column = st.selectbox("Sélectionnez la variable cible :", options=df.columns)
+        # Permettre à l'utilisateur de saisir manuellement la colonne cible (y) via un text input
+        target_column = st.text_input("Entrez le nom de la variable à équilibré cible (y)")
 
         if target_column:
-            # Vérification que la variable est catégorielle ou binaire
-            if df[target_column].dtype == 'object' or df[target_column].nunique() <= 20:  # Limiter aux variables catégorielles ou binaires
-                # Affichage de la distribution sous forme de diagramme circulaire
-                st.write(f"**Distribution de la variable cible '{target_column}' :**")
-                class_distribution = df[target_column].value_counts()
-                fig, ax = plt.subplots()
-                ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=90)
-                ax.axis('equal')  # Assurer un graphique circulaire
-                st.pyplot(fig)
-
-                # Vérification de l'équilibrage (Exemple : critère de 20% d'écart entre les classes)
-                imbalance_threshold = 0.2  # 20% d'écart max entre les classes pour considérer comme équilibré
-                ratio = class_distribution.max() / class_distribution.min()
-
-                if ratio <= (1 + imbalance_threshold):
-                    st.success("OK - La variable est équilibrée.")
-                else:
-                    st.warning("La variable est déséquilibrée. Choisissez une méthode de rééchantillonnage.")
-
-                    # Proposer une méthode de rééchantillonnage
-                    resampling_method = st.radio("Méthode de rééchantillonnage :",
-                                                 ("Sur-échantillonnage", "Sous-échantillonnage"))
-                    df_resampled = []
-                    if resampling_method == "Sur-échantillonnage":
-                        sm = SMOTE(random_state=0)
-                        X_res, y_res = sm.fit_resample(df.drop(target_column, axis=1), df[target_column])
-                        df_resampled = pd.concat([X_res, y_res], axis = 1)
-
-                        st.write(f"Nombre de lignes : {df_resampled.shape[0]}")
-                        st.write(df_resampled.head())
-
-                        # Affichage de la distribution sous forme de diagramme circulaire
-                        st.write(f"**Distribution de la variable cible '{target_column}' :**")
-                        class_distribution = df_resampled[target_column].value_counts()
-                        fig, ax = plt.subplots()
-                        ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=90)
-                        ax.axis('equal')  # Assurer un graphique circulaire
-                        st.pyplot(fig)
-
-                        # Enregistrer le rééchantillonnage des données dans la session
-                        if st.button("Appliquer le rééchantionnage des données"):
-                            df = df_resampled
-                            st.session_state['df'] = df
-                            st.success("Données rééchantillonnées avec succès!")
-
-                    elif resampling_method == "Sous-échantillonnage":
-                        ros = RandomOverSampler(random_state=0)
-                        X_res, y_res = ros.fit_resample(df.drop(target_column, axis=1), df[target_column])
-                        df_resampled = pd.concat([X_res, y_res], axis = 1)
-
-                        st.write(f"Nombre de lignes : {df_resampled.shape[0]}")
-                        st.write(df_resampled.head())
-
-                        # Affichage de la distribution sous forme de diagramme circulaire
-                        st.write(f"**Distribution de la variable cible '{target_column}' :**")
-                        class_distribution = df_resampled[target_column].value_counts()
-                        fig, ax = plt.subplots()
-                        ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=90)
-                        ax.axis('equal')  # Assurer un graphique circulaire
-                        st.pyplot(fig)
-
-                        # Enregistrer le rééchantillonnage des données dans la session
-                        if st.button("Appliquer le rééchantionnage des données"):
-                            df = df_resampled
-                            st.session_state['df'] = df
-                            st.success("Données rééchantillonnées avec succès!")
-
+            if target_column not in df.columns:
+                st.error(f"La colonne '{target_column}' n'existe pas dans le dataset.")
             else:
-                st.warning("La variable sélectionnée n'est pas catégorielle ou contient trop de classes.")
+                # Vérification que la variable est catégorielle ou binaire
+                if df[target_column].dtype == 'object' or df[target_column].nunique() <= 20:  # Limiter aux variables catégorielles ou binaires
+                    # Affichage de la distribution sous forme de diagramme circulaire
+                    st.write(f"**Distribution de la variable cible '{target_column}' :**")
+                    class_distribution = df[target_column].value_counts()
+                    fig, ax = plt.subplots()
+                    ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%', startangle=90)
+                    ax.axis('equal')  # Assurer un graphique circulaire
+                    st.pyplot(fig)
+
+                    # Vérification de l'équilibrage (Exemple : critère de 20% d'écart entre les classes)
+                    imbalance_threshold = 0.2  # 20% d'écart max entre les classes pour considérer comme équilibré
+                    ratio = class_distribution.max() / class_distribution.min()
+
+                    if ratio <= (1 + imbalance_threshold):
+                        st.success("OK - La variable est équilibrée.")
+                    else:
+                        st.warning("La variable est déséquilibrée. Choisissez une méthode de rééchantillonnage.")
+
+                        expander = st.expander("Quelle méthode choisir ?")
+                        expander.markdown("""
+                                     - SOUS ECHANTILLONAGE (ROS) à utiliser quand on a énormément de données (1M+)
+                                     - SUR ECHANTILLONAGE (SMOTE) à utiliser quand on a pas beaucoup de données
+                                     """)
+
+                        # Proposer une méthode de rééchantillonnage
+                        resampling_method = st.radio("Méthode de rééchantillonnage :",
+                                                     ("Sur-échantillonnage", "Sous-échantillonnage"), index=None)
+                        df_resampled = []
+                        if resampling_method == "Sur-échantillonnage":
+                            sm = SMOTE(random_state=0)
+                            X_res, y_res = sm.fit_resample(df.drop(target_column, axis=1), df[target_column])
+                            df_resampled = pd.concat([X_res, y_res], axis=1)
+
+                            st.write(f"Nombre de lignes : {df_resampled.shape[0]}")
+                            st.write(df_resampled.head())
+
+                            # Affichage de la distribution sous forme de diagramme circulaire
+                            st.write(f"**Distribution de la variable cible '{target_column}' :**")
+                            class_distribution = df_resampled[target_column].value_counts()
+                            fig, ax = plt.subplots()
+                            ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%',
+                                   startangle=90)
+                            ax.axis('equal')  # Assurer un graphique circulaire
+                            st.pyplot(fig)
+
+                            # Enregistrer le rééchantillonnage des données dans la session
+                            if st.button("Appliquer le rééchantionnage des données"):
+                                df = df_resampled
+                                st.session_state['df'] = df
+                                st.success("Données rééchantillonnées avec succès!")
+
+                        elif resampling_method == "Sous-échantillonnage":
+                            ros = RandomOverSampler(random_state=0)
+                            X_res, y_res = ros.fit_resample(df.drop(target_column, axis=1), df[target_column])
+                            df_resampled = pd.concat([X_res, y_res], axis=1)
+
+                            st.write(f"Nombre de lignes : {df_resampled.shape[0]}")
+                            st.write(df_resampled.head())
+
+                            # Affichage de la distribution sous forme de diagramme circulaire
+                            st.write(f"**Distribution de la variable cible '{target_column}' :**")
+                            class_distribution = df_resampled[target_column].value_counts()
+                            fig, ax = plt.subplots()
+                            ax.pie(class_distribution, labels=class_distribution.index, autopct='%1.1f%%',
+                                   startangle=90)
+                            ax.axis('equal')  # Assurer un graphique circulaire
+                            st.pyplot(fig)
+
+                            # Enregistrer le rééchantillonnage des données dans la session
+                            if st.button("Appliquer le rééchantionnage des données"):
+                                df = df_resampled
+                                st.session_state['df'] = df
+                                st.success("Données rééchantillonnées avec succès!")
+                else:
+                    try:
+                        st.warning("La variable sélectionnée n'est pas catégorielle ou contient trop de classes.")
+                    except Exception as e:
+                        # Gestion des autres erreurs éventuelles
+                        st.error(f"Une erreur inattendue s'est produite lors du rééchantionnage des données. Détail de l'erreur : {e}")
+        else:
+            st.warning("Veuillez entrer une colonne valide pour la variable cible (y).")
 
     else:
         st.write("Aucune donnée n'a été chargée. Veuillez charger les données via la page Source de données.")

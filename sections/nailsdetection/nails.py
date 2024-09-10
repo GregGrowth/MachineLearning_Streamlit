@@ -154,3 +154,4 @@ def nail_page():
                 st.image(annotated_image, caption='Image avec détections', use_column_width=True)
     else:
         st.write("Veuillez sélectionner une image pour continuer.")
+

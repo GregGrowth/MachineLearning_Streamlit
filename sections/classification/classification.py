@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from lazypredict.Supervised import LazyClassifier
@@ -12,12 +13,6 @@ from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
-# from sklearn.model_selection import cross_val_score
-
-# # Fonction pour calculer la validation croisée
-# def cross_validation_scores(model, X, y, cv=5):
-#     scores = cross_val_score(model, X, y, cv=cv, scoring='accuracy')
-#     return scores.mean(), scores.std()
 
 
 # Fonction principale pour la classification
@@ -154,7 +149,7 @@ def classification_page():
                     selected_columns = st.multiselect(
                         "Sélectionnez les variables explicatives (X)",
                         options=numeric_columns,
-                        default=[],
+                        default=numeric_columns,
                         help="Les variables explicatives (X) doivent être numériques et influencent la variable cible (y)."
                     )
 
@@ -173,6 +168,23 @@ def classification_page():
         st.markdown(
             "<h6>➁ Voici un aperçu sous forme de tableau de vos données sélectionnées ! Si vous êtes sûr de votre choix, appuyez sur le bouton 'Valider'.</h6>",
             unsafe_allow_html=True)
+
+        # Afficher un message d'avertissement si aucune colonne n'est sélectionnée
+        # Si des colonnes sont sélectionnées, les afficher
+        if selected_columns and target != "Sélectionnez une colonne":
+            # Créer trois colonnes pour simuler une ligne de séparation entre col1 et col2
+            col1, col_space, col2 = st.columns([1, 0.1, 1])
+
+            with col1:
+                st.markdown("**Variables explicatives (X) sélectionnées :**")
+                for column in selected_columns:
+                    st.markdown(f"- {column}")
+
+            # col_space pour gérer les espaces entre les colonnes
+
+            with col2:
+                st.markdown("**Cible (y) sélectionnée :**")
+                st.markdown(f"- {target}")
 
         # Afficher les colonnes sélectionnées
         if selected_columns and target_input:
@@ -202,7 +214,7 @@ def classification_page():
                 )
 
         else:
-            st.warning("Veuillez sélectionner les colonnes pour X et y.")
+            st.warning("Veuillez sélectionner vos colonnes X et y.")
 
     # Onglet 2 : Aperçu du dataset
     with tab2:
@@ -218,7 +230,7 @@ def classification_page():
             # Afficher le dataset entier avec des couleurs pour les colonnes X et y
             if st.session_state.get('X') is not None and st.session_state.get('y') is not None:
                 styled_data = df.style.apply(
-                    lambda x: ['background-color: lightblue' if col in st.session_state['X'].columns else
+                    lambda x: ['background-color: lightyellow' if col in st.session_state['X'].columns else
                                'background-color: lightgreen' if col == st.session_state['y'].name else ''
                                for col in df.columns], axis=1
                 )
@@ -228,7 +240,7 @@ def classification_page():
                 st.markdown(
                     """
                     <div style='text-align: center;'>
-                        <img src="https://cdn-icons-png.flaticon.com/512/467/467262.png" alt="Example image" width="150">
+                        <img src="https://cdn-icons-png.flaticon.com/512/467/467262.png" alt="Example image" width="80">
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -238,7 +250,7 @@ def classification_page():
                             unsafe_allow_html=True)
                 selected_data = df[st.session_state['X'].columns.tolist() + [st.session_state['y'].name]]
                 styled_selected_data = selected_data.style.apply(
-                    lambda x: ['background-color: lightblue' if col in st.session_state['X'].columns else
+                    lambda x: ['background-color: lightyellow' if col in st.session_state['X'].columns else
                                'background-color: lightgreen' if col == st.session_state['y'].name else ''
                                for col in selected_data.columns], axis=1
                 )
@@ -250,6 +262,9 @@ def classification_page():
                 st.markdown(
                     "<h5 style='color: #FF5733; font-weight: bold;'>Résumé statistique des variables sélectionnées (X et y)</h5>",
                     unsafe_allow_html=True)
+
+                st.caption("Ceci permet d'avoir une vue rapide des statistiques issues des colonnes sélectionnées précédemment: nombre d'occurences, min, max, moyenne, écart-type et les quartiles.")
+
                 st.write(selected_data.describe())
 
                 st.markdown("---")  # Ligne de séparation
@@ -258,6 +273,8 @@ def classification_page():
                 st.markdown(
                     "<h6 style='color: #000000; font-weight: bold;'>Distributions des variables explicatives (X)</h6>",
                     unsafe_allow_html=True)
+
+                st.caption("La distribution d'une variable est le profil des valeurs, c'est-à-dire l'ensemble formé de toutes les valeurs possibles et des fréquences associées à ces valeurs.")
 
                 # Affichage des histogrammes en 3 colonnes
                 columns_per_row = 3
@@ -276,6 +293,9 @@ def classification_page():
                 st.markdown(
                     "<h6 style='color: #000000; font-weight: bold;'>Boxplots des variables explicatives (X) en fonction de la cible (y)</h6>",
                     unsafe_allow_html=True)
+
+                st.caption("Ce graphique permet de résumer une variable de manière simple et visuel, d'identifier les valeurs extrêmes et de comprendre la répartition des observations. "
+                           "La valeur centrale du graphique est la médiane, par conséquence, il existe autant de valeur supérieures qu'inférieures à cette valeur dans l'échantillon.")
 
                 # Affichage des boxplots en 3 colonnes
                 for i, col in enumerate(st.session_state['X'].columns):
@@ -440,197 +460,167 @@ def classification_page():
 
     # Onglet 3 : Modélisation
     with tab3:
-
         # Création des sous-onglets
         subtab1, subtab2, subtab3, subtab4, subtab5 = st.tabs(
             ["LazyPredict", "Logistic Regression", "Random Forest", "K-Nearest Neighbors", "Autres modèles"]
         )
 
-        # Sous-onglet 1 : LazyPredict
+        # --------------------- Sous-onglet 1 : LazyPredict --------------------- #
         with subtab1:
             st.caption(
                 "LazyPredict permet une modélisation rapide en testant plusieurs modèles de classification sans nécessiter d'importante configuration préalable.")
 
-            # Vérification que les variables X et y sont bien définies avant de continuer
             if st.session_state['X'] is not None and st.session_state['y'] is not None:
                 X_train, X_test, y_train, y_test = train_test_split(st.session_state['X'], st.session_state['y'],
                                                                     test_size=test_size, random_state=random_state)
 
                 if st.button("Lancer LazyPredict"):
-                    # Lancer LazyPredict
                     lazy_clf = LazyClassifier(verbose=0, ignore_warnings=True)
                     models, predictions = lazy_clf.fit(X_train, X_test, y_train, y_test)
 
-                    # Afficher un message pour l'utilisateur
                     st.success("LazyPredict s'est exécuté correctement. Voici les résultats des modèles.")
-
-                    # Afficher les résultats sous forme de DataFrame
                     st.dataframe(models)
 
                     st.caption("""
                     - **Accuracy** : Le pourcentage de prédictions correctes parmi l'ensemble des prédictions. Plus il est élevé, meilleur est le modèle.
-                    - **Balanced Accuracy** : Moyenne entre le taux de vrais positifs et de vrais négatifs. Utile pour les ensembles de données déséquilibrés.
-                    - **ROC AUC** : Zone sous la courbe ROC (Receiver Operating Characteristic), qui mesure la capacité du modèle à discriminer entre classes. Ici, elle n'est pas disponible.
-                    - **F1 Score** : Moyenne harmonique entre précision (precision) et rappel (recall). Un score F1 élevé indique un bon équilibre entre ces deux métriques.
+                    - **Balanced Accuracy** : Moyenne entre le taux de vrais positifs et de vrais négatifs.
+                    - **ROC AUC** : Mesure la capacité du modèle à discriminer entre classes.
+                    - **F1 Score** : Moyenne harmonique entre précision (precision) et rappel (recall).
                     - **Time Taken** : Temps nécessaire pour entraîner le modèle.
                     """)
 
-                    # Extraire les 5 meilleurs modèles basés sur l'exactitude ('Accuracy')
-                    top_5_models = models.sort_values(by="Accuracy", ascending=False).head(5)
-
-                    # Extraire les 5 meilleurs modèles basés sur Accuracy, Balanced Accuracy, et F1 Score
+                    # Top 5 des modèles
                     top_5_accuracy = models.sort_values(by="Accuracy", ascending=False).head(5)
                     top_5_balanced_accuracy = models.sort_values(by="Balanced Accuracy", ascending=False).head(5)
                     top_5_f1_score = models.sort_values(by="F1 Score", ascending=False).head(5)
 
-                    st.markdown("---")
+                    # Visualisation
+                    def plot_top_models(df, metric, title, palette):
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        sns.barplot(x=df[metric], y=df.index, palette=palette, ax=ax)
+                        ax.set_title(title, fontsize=10, fontweight="bold")
+                        ax.set_ylabel('')
+                        st.pyplot(fig)
 
-                    # Afficher les résultats sur la même ligne dans un tableau
-                    st.markdown(
-                        "<h6 style='color: #000000; font-weight: bold;'>Top 5 des meilleurs modèles sur les différents KPI</h6>",
-                        unsafe_allow_html=True)
-
-                    # Construire un DataFrame pour afficher les meilleurs modèles sur les différentes colonnes
-                    top_5_df = pd.DataFrame({
-                        "Model (Accuracy)": top_5_accuracy.index,
-                        "Accuracy": top_5_accuracy["Accuracy"].values,
-                        "Model (Balanced Accuracy)": top_5_balanced_accuracy.index,
-                        "Balanced Accuracy": top_5_balanced_accuracy["Balanced Accuracy"].values,
-                        "Model (F1 Score)": top_5_f1_score.index,
-                        "F1 Score": top_5_f1_score["F1 Score"].values
-                    })
-
-                    # Afficher le DataFrame dans l'application Streamlit
-                    st.dataframe(top_5_df)
-
-                    # Afficher un message expliquant les 5 meilleurs modèles
-                    st.info(
-                        "Les 5 meilleurs modèles affichés ici sont ceux ayant obtenu les scores les plus élevés pour le test LazyPredict.")
-
-                    st.markdown("---")
-
-                    # Affichage des meilleurs modèles par KPI sous 3 colonnes
-                    st.markdown(
-                        "<h6 style='color: #000000; font-weight: bold;'>Visualisation des 5 meilleurs modèles sur les différents KPI</h6>",
-                        unsafe_allow_html=True)
-
-                    # Affichage des meilleures visualisations dans des expanders
+                    # Affichage des meilleures visualisations
                     with st.expander("Voir la visualisation des 5 meilleurs modèles par Accurancy"):
-                        # Visualisation pour Accuracy
-                        st.markdown("**Top 5 Accuracy**")
-                        fig, ax = plt.subplots(figsize=(6, 4))
-                        sns.barplot(x=top_5_accuracy["Accuracy"], y=top_5_accuracy.index, palette="Blues_d", ax=ax)
-                        ax.set_title("Accuracy", fontsize=8, fontweight="bold")
-                        ax.set_ylabel('')  # Suppression de la légende sur l'axe des y
-                        st.pyplot(fig)
+                        plot_top_models(top_5_accuracy, "Accuracy", "Top 5 Accuracy", "Blues_d")
 
-                    with st.expander("Voir la visualisation des 5 meilleurs modèles par Balanced Accurancy"):
-                        # Visualisation pour Balanced Accuracy
-                        st.markdown("**Top 5 Balanced Accuracy**")
-                        fig, ax = plt.subplots(figsize=(6, 4))
-                        sns.barplot(x=top_5_balanced_accuracy["Balanced Accuracy"], y=top_5_balanced_accuracy.index,
-                                    palette="Greens_d", ax=ax)
-                        ax.set_title("Balanced Accuracy", fontsize=8, fontweight="bold")
-                        ax.set_ylabel('')  # Suppression de la légende sur l'axe des y
-                        st.pyplot(fig)
+                    with st.expander("Voir la visualisation des 5 meilleurs modèles par Balanced Accuracy"):
+                        plot_top_models(top_5_balanced_accuracy, "Balanced Accuracy", "Top 5 Balanced Accuracy",
+                                        "Greens_d")
 
                     with st.expander("Voir la visualisation des 5 meilleurs modèles par F1 Score"):
-                        # Visualisation pour F1 Score
-                        st.markdown("**Top 5 F1 Score**")
-                        fig, ax = plt.subplots(figsize=(6, 4))
-                        sns.barplot(x=top_5_f1_score["F1 Score"], y=top_5_f1_score.index, palette="Oranges_d", ax=ax)
-                        ax.set_title("F1 Score", fontsize=8, fontweight="bold")
-                        ax.set_ylabel('')  # Suppression de la légende sur l'axe des y
+                        plot_top_models(top_5_f1_score, "F1 Score", "Top 5 F1 Score", "Oranges_d")
+
+            else:
+                st.warning("Veuillez d'abord sélectionner les variables explicatives et la cible dans l'onglet 1.")
+
+        # --------------------- Sous-onglet 2 : Logistic Regression --------------------- #
+        with subtab2:
+            tabs = st.tabs(["Modèle", "Validation Croisée"])
+
+            # Sous-onglet 1 : Modélisation
+            with tabs[0]:
+                st.caption(
+                    "La régression logistique est un modèle statistique utilisé pour prédire la probabilité qu'un événement se produise.")
+
+                if st.session_state.get('X') is not None and st.session_state.get('y') is not None:
+                    # Hyperparamètres
+                    st.markdown("<h6 style='color: #000000; font-weight: bold;'>Choisissez vos hyperparamètres :</h6>",
+                                unsafe_allow_html=True)
+                    max_iter = st.number_input("Max Iterations", value=100, step=10)
+                    penalty = st.selectbox("Pénalité", options=['l2', 'none'], index=0)
+                    C = st.slider("Paramètre de régularisation (C)", min_value=0.01, max_value=10.0, value=1.0,
+                                  step=0.1)
+                    solver = st.selectbox("Algorithme d'optimisation (solver)", options=['lbfgs', 'saga', 'liblinear'],
+                                          index=0)
+
+                    # Instanciation du modèle
+                    model_lr = LogisticRegression(max_iter=max_iter, penalty=penalty, C=C, solver=solver)
+
+                    # Entraîner le modèle
+                    if st.button("Lancer Logistic Regression"):
+                        X_train, X_test, y_train, y_test = train_test_split(st.session_state['X'],
+                                                                            st.session_state['y'], test_size=0.3,
+                                                                            random_state=42)
+                        model_lr.fit(X_train, y_train)
+                        st.success("Modèle Logistic Regression entraîné avec succès.")
+
+                        # Calcul des métriques
+                        accuracy_lr = model_lr.score(X_test, y_test)
+                        y_pred = model_lr.predict(X_test)
+                        report = classification_report(y_test, y_pred, output_dict=True)
+
+                        # Affichage des métriques
+                        st.markdown(f"**Score d'Accuracy** : {accuracy_lr:.4f}")
+                        st.dataframe(pd.DataFrame(report).transpose())
+
+                        # Visualisation de la matrice de confusion
+                        cm = confusion_matrix(y_test, y_pred)
+                        fig, ax = plt.subplots(figsize=(5, 3))
+                        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
+                        ax.set_xlabel('Prédictions')
+                        ax.set_ylabel('Vérités')
                         st.pyplot(fig)
 
-
+                        # Stocker l'état du modèle
+                        st.session_state.model_trained = True
+                        st.session_state.model_lr = model_lr
                 else:
-                    st.warning("Cliquez sur le bouton pour lancer LazyPredict.")
-            else:
-                st.warning("Veuillez d'abord sélectionner les variables explicatives et la cible dans l'onglet 1.")
+                    st.warning("Veuillez sélectionner les variables explicatives et la cible.")
 
-        # Sous-onglet 2 : Logistic Regression
-        with subtab2:
-            st.caption(
-                "La régression logistique est un modèle statistique utilisé pour prédire la probabilité qu'un événement se produise.")
+            # Sous-onglet 2 : Validation Croisée
+            with tabs[1]:
 
-            # Vérification que les variables X et y sont bien définies avant de continuer
-            if st.session_state['X'] is not None and st.session_state['y'] is not None:
-                # Ajout des hyperparamètres ajustables par l'utilisateur
-                st.markdown("<h6 style='color: #000000; font-weight: bold;'>Vous pouvez choisir vos hyperparamètres ici :</h6>",
-                            unsafe_allow_html=True)
+                # Caption explicatif pour la validation croisée
+                st.caption("""
+                **Qu'est-ce que la validation croisée ?**
+                La validation croisée est une technique d'évaluation des modèles qui permet de mieux estimer les performances d'un modèle de machine learning. 
+                Elle consiste à diviser le jeu de données en plusieurs sous-ensembles (appelés "folds"). Le modèle est ensuite entraîné sur certains de ces folds et testé sur les autres. 
+                Ce processus est répété plusieurs fois, et les résultats sont ensuite moyennés pour obtenir une évaluation plus robuste.
 
-                # Hyperparamètres à ajuster
-                max_iter = st.number_input("Max Iterations (nombre maximum d'itérations)", value=100, step=10)
-                penalty = st.selectbox("Pénalité", options=['l2', 'none'], index=0,
-                                       help="Choisissez la pénalité à utiliser.")
-                C = st.slider("Paramètre de régularisation (C)", min_value=0.01, max_value=10.0, value=1.0, step=0.1)
-                solver = st.selectbox("Algorithme d'optimisation (solver)", options=['lbfgs', 'saga', 'liblinear'],
-                                      index=0, help="Choisissez l'algorithme d'optimisation.")
+                **Comment analyser les résultats ?**
+                - **Scores individuels** : Chaque score représente la performance du modèle sur un fold particulier. 
+                  Des scores cohérents entre eux suggèrent que le modèle est stable et se généralise bien sur les données non vues.
+                - **Moyenne des scores** : La moyenne des scores fournit une estimation globale de la performance du modèle. Plus elle est élevée, meilleur est le modèle.
+                - **Écart-type** : Un écart-type faible indique que le modèle est stable, tandis qu'un écart-type élevé peut suggérer que le modèle est sensible à la manière dont les données sont divisées.
+                """)
 
-                # Instanciation du modèle avec les hyperparamètres
-                model_lr = LogisticRegression(max_iter=max_iter, penalty=penalty, C=C, solver=solver)
+                if st.session_state.get("model_trained", False):
+                    # Paramètre pour la validation croisée avec infobulle
+                    cv_folds = st.slider("Nombre de folds pour la validation croisée",
+                                         min_value=3,
+                                         max_value=10,
+                                         value=5,
+                                         step=1,
+                                         help="Détermine en combien de sous-ensembles les données seront divisées pour la validation croisée. "
+                                              "Un plus grand nombre de folds fournit une meilleure estimation des performances, mais augmente le temps d'exécution.")
 
-                if st.button("Lancer Logistic Regression"):
-                    # Split des données
-                    X_train, X_test, y_train, y_test = train_test_split(st.session_state['X'], st.session_state['y'],
-                                                                        test_size=test_size, random_state=random_state)
-                    # Entraînement du modèle
-                    model_lr.fit(X_train, y_train)
+                    # Lancer la Cross Validation
+                    if st.button("Lancer la validation croisée"):
+                        # Perform cross-validation
+                        cv_scores = cross_val_score(st.session_state.model_lr, st.session_state['X'],
+                                                    st.session_state['y'], cv=cv_folds, scoring='accuracy')
 
-                    # Afficher un message de succès
-                    st.success("Le modèle Logistic Regression a été entraîné avec succès.")
+                        # Calcul des résultats
+                        mean_cv_score = cv_scores.mean()
+                        std_cv_score = cv_scores.std()
 
-                    # Calcul des métriques
-                    accuracy_lr = model_lr.score(X_test, y_test)
-                    y_pred = model_lr.predict(X_test)
-                    report = classification_report(y_test, y_pred, output_dict=True)
-
-                    st.markdown("---")
-
-                    # Affichage des métriques de performance sur 2 colonnes
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        # Encadrer le résultat de l'accuracy
+                        # Encadrer les résultats dans un markdown
                         st.markdown(f"""
                             <div style="padding: 10px; border: 2px solid #007BFF; border-radius: 5px; background-color: #F0F8FF">
-                                <h6 style='color: #000000;'>Le score d'Accuracy obtenu pour ce modèle est de {accuracy_lr:.4f}</h6>
+                                <h6 style='color: #000000;'>Résultats de la Validation Croisée :</h6>
+                                <ul>
+                                    <li><strong>Scores de validation croisée</strong> : {cv_scores}</li>
+                                    <li><strong>Moyenne des scores</strong> : {mean_cv_score:.4f}</li>
+                                    <li><strong>Écart-type des scores</strong> : {std_cv_score:.4f}</li>
+                                </ul>
                             </div>
-                            """, unsafe_allow_html=True)
-
-                    with col2:
-                        # Inclure le rapport de classification dans un expander
-                        with st.expander("Voir le rapport de classification"):
-                            st.markdown("**Rapport de classification**")
-                            st.dataframe(pd.DataFrame(report).transpose())
-
-                    st.markdown("---")
-
-                    # Visualisation de la matrice de confusion
-                    st.markdown("**Matrice de confusion**")
-                    cm = confusion_matrix(y_test, y_pred)
-                    fig, ax = plt.subplots(figsize=(5, 3))
-                    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
-                    ax.set_xlabel('Prédictions')
-                    ax.set_ylabel('Vérités')
-                    st.pyplot(fig)
-
-                    # Caption explicatif pour la matrice de confusion
-                    st.caption("""
-                    La matrice de confusion est utilisée pour évaluer les performances d'un modèle de classification. 
-                    Elle affiche le nombre de vraies prédictions et d'erreurs, réparties en 4 catégories :
-                    - **Vrais Positifs (TP)** : Prédictions correctes pour la classe positive.
-                    - **Faux Négatifs (FN)** : Étiquettes positives mal classées comme négatives.
-                    - **Faux Positifs (FP)** : Étiquettes négatives mal classées comme positives.
-                    - **Vrais Négatifs (TN)** : Prédictions correctes pour la classe négative.
-                    L'objectif est de maximiser les vraies prédictions (TP et TN) tout en minimisant les erreurs (FP et FN).
-                    """)
+                        """, unsafe_allow_html=True)
 
                 else:
-                    st.warning("Cliquez sur le bouton pour entraîner le modèle Logistic Regression.")
-            else:
-                st.warning("Veuillez d'abord sélectionner les variables explicatives et la cible dans l'onglet 1.")
+                    st.info("Entraînez le modèle avant de lancer la validation croisée.")
 
         # Sous-onglet 3 : Random Forest
         with subtab3:
@@ -960,98 +950,9 @@ def classification_page():
             else:
                 st.warning("Veuillez d'abord sélectionner les variables explicatives et la cible dans l'onglet 1.")
 
-    # # Onglet 4 : Rapport Final
-    # with tab4:
-    #     st.markdown("<h5 style='color: #FF5733; font-weight: bold;'>Rapport Final</h5>", unsafe_allow_html=True)
-    #     st.caption("Ce rapport contient un résumé de tous les modèles entraînés et leurs performances respectives.")
-    #
-    #     # Liste des lignes du rapport pour la génération du fichier texte
-    #     rapport_lines = []
-    #     cv_folds = 5  # Nombre de folds pour la validation croisée
-    #
-    #     # Logistic Regression
-    #     if 'logistic_model' in st.session_state:
-    #         st.subheader("Logistic Regression")
-    #         accuracy_logistic = st.session_state['logistic_model'].score(st.session_state['X_test'],
-    #                                                                      st.session_state['y_test'])
-    #         st.write(f"**Accuracy** : {accuracy_logistic:.4f}")
-    #         rapport_lines.append("Logistic Regression")
-    #         rapport_lines.append(f"Accuracy : {accuracy_logistic:.4f}\n")
-    #
-    #         y_pred_logistic = st.session_state['logistic_model'].predict(st.session_state['X_test'])
-    #         report_logistic = classification_report(st.session_state['y_test'], y_pred_logistic, output_dict=True)
-    #         st.markdown("**F1 Score** :")
-    #         st.write(f"{report_logistic['weighted avg']['f1-score']:.4f}")
-    #         rapport_lines.append(f"F1 Score : {report_logistic['weighted avg']['f1-score']:.4f}\n")
-    #
-    #         # Cross-validation pour Logistic Regression
-    #         mean_cv, std_cv = cross_validation_scores(st.session_state['logistic_model'], st.session_state['X'],
-    #                                                   st.session_state['y'], cv=cv_folds)
-    #         st.write(f"**Validation croisée (Accuracy - {cv_folds} folds)** : {mean_cv:.4f} ± {std_cv:.4f}")
-    #         rapport_lines.append(f"Validation croisée (Accuracy - {cv_folds} folds) : {mean_cv:.4f} ± {std_cv:.4f}\n")
-    #
-    #         # Affichage de la matrice de confusion
-    #         cm_logistic = confusion_matrix(st.session_state['y_test'], y_pred_logistic)
-    #         fig, ax = plt.subplots()
-    #         sns.heatmap(cm_logistic, annot=True, fmt='d', cmap='Blues', ax=ax)
-    #         st.pyplot(fig)
-    #
-    #     # Random Forest
-    #     if 'random_forest_model' in st.session_state:
-    #         st.subheader("Random Forest")
-    #         accuracy_rf = st.session_state['random_forest_model'].score(st.session_state['X_test'],
-    #                                                                     st.session_state['y_test'])
-    #         st.write(f"**Accuracy** : {accuracy_rf:.4f}")
-    #         rapport_lines.append("Random Forest")
-    #         rapport_lines.append(f"Accuracy : {accuracy_rf:.4f}\n")
-    #
-    #         y_pred_rf = st.session_state['random_forest_model'].predict(st.session_state['X_test'])
-    #         report_rf = classification_report(st.session_state['y_test'], y_pred_rf, output_dict=True)
-    #         st.markdown("**F1 Score** :")
-    #         st.write(f"{report_rf['weighted avg']['f1-score']:.4f}")
-    #         rapport_lines.append(f"F1 Score : {report_rf['weighted avg']['f1-score']:.4f}\n")
-    #
-    #         # Cross-validation pour Random Forest
-    #         mean_cv, std_cv = cross_validation_scores(st.session_state['random_forest_model'], st.session_state['X'],
-    #                                                   st.session_state['y'], cv=cv_folds)
-    #         st.write(f"**Validation croisée (Accuracy - {cv_folds} folds)** : {mean_cv:.4f} ± {std_cv:.4f}")
-    #         rapport_lines.append(f"Validation croisée (Accuracy - {cv_folds} folds) : {mean_cv:.4f} ± {std_cv:.4f}\n")
-    #
-    #         # Affichage de la matrice de confusion
-    #         cm_rf = confusion_matrix(st.session_state['y_test'], y_pred_rf)
-    #         fig, ax = plt.subplots()
-    #         sns.heatmap(cm_rf, annot=True, fmt='d', cmap='Blues', ax=ax)
-    #         st.pyplot(fig)
-    #
-    #     # K-NN
-    #     if 'knn_model' in st.session_state:
-    #         st.subheader("K-NN")
-    #         accuracy_knn = st.session_state['knn_model'].score(st.session_state['X_test'], st.session_state['y_test'])
-    #         st.write(f"**Accuracy** : {accuracy_knn:.4f}")
-    #         rapport_lines.append("K-Nearest Neighbors (K-NN)")
-    #         rapport_lines.append(f"Accuracy : {accuracy_knn:.4f}\n")
-    #
-    #         y_pred_knn = st.session_state['knn_model'].predict(st.session_state['X_test'])
-    #         report_knn = classification_report(st.session_state['y_test'], y_pred_knn, output_dict=True)
-    #         st.markdown("**F1 Score** :")
-    #         st.write(f"{report_knn['weighted avg']['f1-score']:.4f}")
-    #         rapport_lines.append(f"F1 Score : {report_knn['weighted avg']['f1-score']:.4f}\n")
-    #
-    #         # Cross-validation pour K-NN
-    #         mean_cv, std_cv = cross_validation_scores(st.session_state['knn_model'], st.session_state['X'],
-    #                                                   st.session_state['y'], cv=cv_folds)
-    #         st.write(f"**Validation croisée (Accuracy - {cv_folds} folds)** : {mean_cv:.4f} ± {std_cv:.4f}")
-    #         rapport_lines.append(f"Validation croisée (Accuracy - {cv_folds} folds) : {mean_cv:.4f} ± {std_cv:.4f}\n")
-    #
-    #         # Affichage de la matrice de confusion
-    #         cm_knn = confusion_matrix(st.session_state['y_test'], y_pred_knn)
-    #         fig, ax = plt.subplots()
-    #         sns.heatmap(cm_knn, annot=True, fmt='d', cmap='Blues', ax=ax)
-    #         st.pyplot(fig)
-    #
-    #     # Génération du rapport final
-    #     if rapport_lines:
-    #         rapport_txt = "\n".join(rapport_lines)
-    #         st.download_button("Télécharger le rapport", rapport_txt, file_name="rapport_final.txt")
-    #     else:
-    #         st.info("Aucun modèle n'a été entraîné pour le moment.")
+        # Onglet 4 : Rapport Final
+        with tab4:
+            st.markdown("<h5 style='color: #FF5733; font-weight: bold;'>Rapport Final</h5>", unsafe_allow_html=True)
+            st.caption("Ce rapport contient un résumé de tous les modèles entraînés et leurs performances respectives.")
+
+            st.image("https://reseau-ehpad-paysbasque.org/wp-content/uploads/2021/06/enconstruction.png", use_column_width=True)
