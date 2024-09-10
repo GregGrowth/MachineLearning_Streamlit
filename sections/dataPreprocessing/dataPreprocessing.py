@@ -370,7 +370,7 @@ def nettoyageData_page():
             elif action == "Remplacer les valeurs manquantes":
                 # Sélectionner une colonne avec des valeurs manquantes
                 column_with_missing = st.selectbox(
-                    "Sélectionnez une colonne à imputer :", missing_data_df["Nom de la variable"], index=None)
+                    "Sélectionnez une colonne à imputer :", missing_data_df["Nom de la variable"])
 
                 st.caption("""
                 ### Conseils :
@@ -710,10 +710,9 @@ def nettoyageData_page():
         # Section Équilibrage de la variable ciblée
         st.subheader("Équilibrage de la variable ciblée")
 
-        st.captions("L'équilibrage des données est disponible uniquement pour des variables binaires ou catégorielles avec moins de 20 modalités et elles doivent être de type 'object'")
+        st.caption("L'équilibrage des données est disponible uniquement pour des variables binaires ou catégorielles avec moins de 20 modalités et elles doivent être de type 'object'")
 
         # Sélection de la variable cible
-        # Permettre à l'utilisateur de saisir manuellement la colonne cible (y) via un text input
         target_column = st.text_input("Entrez le nom de la variable à équilibré cible (y)")
 
         if target_column:
