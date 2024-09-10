@@ -1,5 +1,7 @@
 # Playground ML
 
+Lien Projet Déploiement : https://ckoa5pnjkjpefcatubc38e.streamlit.app/?fbclid=IwZXh0bgNhZW0CMTEAAR2eX4KAuX7MzA-Q8om6v-2a8iy-ccjRljV05FkZtduvkzaLjKZ3UJTQPRE_aem_KhcmfZrS7iFmbhscLAeLFQ
+
 Bienvenue dans **Playground ML**, une application web interactive conçue pour vous permettre d'explorer le machine learning de manière intuitive. Que vous soyez débutant ou expert, notre application vous guide à travers chaque étape, de la préparation des données à l'évaluation des modèles.
 
 ## Objectif du projet
