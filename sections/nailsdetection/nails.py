@@ -1,7 +1,8 @@
 import streamlit as st
 from roboflow import Roboflow
-from PIL import Image, ImageDraw,ImageFont
+from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
+import os
 
 # Initialiser Roboflow avec la clé API
 rf = Roboflow(api_key="N5DG8Y61gDw4qE31kXBa")
@@ -16,10 +17,6 @@ def predire_image(image, conf):
     # Utiliser le modèle Roboflow pour faire la prédiction
     result = model.predict(temp_img_path, confidence=conf).json()
     return result
-
-
-from PIL import ImageDraw, ImageFont
-
 
 def draw_predictions(image, predictions):
     draw = ImageDraw.Draw(image)
@@ -106,30 +103,55 @@ def results(result):
 def nail_page():
     st.caption("Bienvenue dans le Playground de la détection d'ongle")
     st.subheader("Détection d'ongles")
-    st.write("Téléchargez une image pour détecter les ongles.")
+    st.info("Téléchargez une image ou choisissez une image de test pour détecter les ongles.")
 
-    # Charger l'image depuis l'utilisateur
-    uploaded_image = st.file_uploader("Choisissez une image...", type="jpg")
+    # Chemin vers le fichier image test
+    test_image_path = 'data/ongles1.jpeg'
 
-    if uploaded_image is not None:
-        # Afficher l'image téléchargée
-        image = Image.open(uploaded_image)
+    # Ajouter une option pour choisir l'image test ou télécharger une image
+    option = st.selectbox(
+        "Choisissez une option",
+        ["Téléchargez une image", "Image de test"]
+    )
+
+    image = None
+
+    if option == "Téléchargez une image":
+        # Charger l'image depuis l'utilisateur
+        uploaded_image = st.file_uploader("Choisissez une image...", type="jpg")
+
+        if uploaded_image is not None:
+            # Afficher l'image téléchargée
+            image = Image.open(uploaded_image)
+    else:
+        # Charger l'image test choisie
+        if os.path.exists(test_image_path):
+            image = Image.open(test_image_path)
+        else:
+            st.error(f"L'image de test '{test_image_path}' est introuvable.")
+            return
+
+    if image:
+        # Afficher l'image sélectionnée
         with st.expander("Afficher l'image"):
-            st.image(image, caption='Image téléchargée', use_column_width=True)
+            st.image(image, caption='Image sélectionnée', use_column_width=True)
 
         # Demander l'intervalle de confiance
         conf = st.slider("Sélectionnez l'intervalle de confiance", 0, 100, 50)
         st.write("**Intervalle de confiance:**", conf)
 
-        # Faire la prédiction
-        with st.spinner("Analyse de l'image..."):
-            result = predire_image(image, conf)
+        # Ajouter un bouton pour lancer la prédiction
+        if st.button("Lancer la prédiction"):
+            with st.spinner("Analyse de l'image..."):
+                result = predire_image(image, conf)
 
-        # Afficher les résultats dans un DataFrame
-        results(result)
+            # Afficher les résultats dans un DataFrame
+            results(result)
 
-        # Dessiner les prédictions sur l'image
-        if 'predictions' in result:
-            annotated_image = draw_predictions(image.copy(), result)
-            st.image(annotated_image, caption='Image avec détections', use_column_width=True)
+            # Dessiner les prédictions sur l'image
+            if 'predictions' in result:
+                annotated_image = draw_predictions(image.copy(), result)
+                st.image(annotated_image, caption='Image avec détections', use_column_width=True)
+    else:
+        st.write("Veuillez sélectionner une image pour continuer.")
 
