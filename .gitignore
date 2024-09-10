@@ -6,3 +6,5 @@ __pycache__
 .DS_Store
 appTest*.py
 sweetviz_report.html
+classificationTest/*
+temp_image.jpg
