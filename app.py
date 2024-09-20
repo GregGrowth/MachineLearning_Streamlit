@@ -51,7 +51,7 @@ st.markdown("""
     }
     </style>
     <div class="top-bar">
-        <a href="https://github.com/mkunegel/ProjetML" target="_blank">🔗 Lien GitHub projet ML</a>
+        <a href="https://github.com/GregGrowth/MachineLearning_Streamlit">🔗 Lien GitHub projet ML</a>
     </div>
     """, unsafe_allow_html=True)
 
